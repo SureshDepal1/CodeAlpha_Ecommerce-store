@@ -1,3 +1,10 @@
 from django.contrib import admin
 
-# Custom model administration will be added in a later development step.
+from .models import Product
+
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+	list_display = ("name", "category", "price", "stock", "is_available", "created_at")
+	list_filter = ("category", "is_available")
+	search_fields = ("name", "category")
