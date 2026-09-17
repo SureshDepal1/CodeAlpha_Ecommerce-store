@@ -1,6 +1,6 @@
 # Simple E-commerce Store
 
-A beginner-friendly Django foundation for a simple online store. The project is currently in development and this repository contains Step 3: the database-backed Product Listing page.
+A beginner-friendly Django foundation for a simple online store. The project is currently in development and this repository contains Step 5: user registration with Django authentication.
 
 ## Features
 
@@ -107,6 +107,10 @@ Products are retrieved from the database and only available products are display
 
 Available products can now be viewed individually at `/products/<product_id>/`. Product details are loaded from the database, while nonexistent or unavailable products return a standard 404 response. A responsive product detail layout and automated detail-page tests have been added.
 
+## Step 5 - User Registration
+
+Django's built-in authentication system now supports user registration at `/register/`. The form collects username, email, password, and password confirmation. Django handles secure password hashing, while built-in validation and automated registration tests protect the flow. Login will be implemented in a later step.
+
 ## Development Status
 
-Step 4 - Product details page completed. Product database, Django Admin, product listing, and available product details are available.
+Step 5 - User registration completed. Product database, Django Admin, product listing, product details, and registration are available. Login remains planned for a later step.

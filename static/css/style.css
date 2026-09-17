@@ -70,6 +70,21 @@ body {
     color: var(--brand);
 }
 
+.site-messages {
+    padding-top: 1.25rem;
+}
+
+.site-message {
+    margin: 0;
+    padding: 0.8rem 1rem;
+    border: 1px solid #a8d2c5;
+    border-radius: 3px;
+    background: #edf8f4;
+    color: var(--brand-dark);
+    font-family: Arial, sans-serif;
+    font-size: 0.9rem;
+}
+
 .hero {
     display: flex;
     align-items: center;
@@ -390,6 +405,108 @@ h1 {
     background: #e9f1ef;
 }
 
+.registration-page {
+    padding: 5rem 0 6rem;
+}
+
+.registration-card {
+    width: min(100% - 3rem, 560px);
+    padding: 3rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+    box-shadow: 0 12px 32px rgba(31, 41, 51, 0.08);
+}
+
+.registration-card h1 {
+    max-width: none;
+    margin-bottom: 1rem;
+    font-size: clamp(2.5rem, 6vw, 4.2rem);
+}
+
+.registration-intro {
+    margin-bottom: 2rem;
+    color: var(--muted);
+}
+
+.registration-form {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.form-field {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.form-field label {
+    font-family: Arial, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.form-field input {
+    width: 100%;
+    padding: 0.85rem 0.9rem;
+    border: 1px solid #b8c9c5;
+    border-radius: 3px;
+    color: var(--ink);
+    background: #fbfdfc;
+    font: inherit;
+}
+
+.form-field input:focus {
+    outline: 3px solid rgba(15, 118, 110, 0.18);
+    border-color: var(--brand);
+}
+
+.form-help {
+    margin: 0;
+    color: var(--muted);
+    font-family: Arial, sans-serif;
+    font-size: 0.75rem;
+}
+
+.form-help ul {
+    margin: 0.25rem 0 0;
+    padding-left: 1.2rem;
+}
+
+.form-errors,
+.field-errors {
+    color: #a33a2a;
+    font-family: Arial, sans-serif;
+    font-size: 0.8rem;
+}
+
+.form-errors ul,
+.field-errors ul {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+
+.registration-submit {
+    width: 100%;
+    margin-top: 0.5rem;
+    cursor: pointer;
+}
+
+.registration-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+    margin: 2rem 0 0;
+    color: var(--muted);
+    font-family: Arial, sans-serif;
+    font-size: 0.85rem;
+}
+
+.registration-links a {
+    color: var(--brand-dark);
+    font-weight: 700;
+}
+
 .site-footer {
     border-top: 1px solid var(--line);
     background: var(--surface);
@@ -453,6 +570,15 @@ h1 {
 
     .product-detail__content {
         padding: 0;
+    }
+
+    .registration-page {
+        padding: 4rem 0;
+    }
+
+    .registration-card {
+        width: min(100% - 2rem, 560px);
+        padding: 2rem 1.25rem;
     }
 
     .product-grid {

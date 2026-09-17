@@ -1,7 +1,12 @@
+from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import check_password
 from django.test import TestCase
 from django.urls import reverse
 
 from .models import Product
+
+
+User = get_user_model()
 
 
 class HomePageTests(TestCase):
@@ -185,3 +190,81 @@ class ProductModelTests(TestCase):
         )
 
         self.assertTrue(product.is_available)
+
+
+class RegistrationTests(TestCase):
+    registration_url = reverse("store:register")
+    valid_registration_data = {
+        "username": "newshopper",
+        "email": "newshopper@example.com",
+        "password1": "A-strong-registration-password-123!",
+        "password2": "A-strong-registration-password-123!",
+    }
+
+    def test_registration_page_loads(self):
+        response = self.client.get(self.registration_url)
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_registration_uses_correct_template(self):
+        response = self.client.get(self.registration_url)
+
+        self.assertTemplateUsed(response, "store/register.html")
+
+    def test_registration_form_contains_expected_fields_and_csrf_token(self):
+        response = self.client.get(self.registration_url)
+
+        self.assertContains(response, 'name="username"')
+        self.assertContains(response, 'name="email"')
+        self.assertContains(response, 'name="password1"')
+        self.assertContains(response, 'name="password2"')
+        self.assertContains(response, "csrfmiddlewaretoken")
+
+    def test_valid_registration_creates_user_with_hashed_password(self):
+        response = self.client.post(
+            self.registration_url,
+            self.valid_registration_data,
+            follow=True,
+        )
+
+        user = User.objects.get(username="newshopper")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.redirect_chain, [(reverse("store:home"), 302)])
+        self.assertContains(response, "Account created successfully.")
+        self.assertNotEqual(user.password, self.valid_registration_data["password1"])
+        self.assertTrue(check_password(self.valid_registration_data["password1"], user.password))
+
+    def test_duplicate_username_is_rejected(self):
+        User.objects.create_user(username="newshopper", password="ExistingPassword123!")
+
+        response = self.client.post(self.registration_url, self.valid_registration_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "A user with that username already exists.")
+        self.assertEqual(User.objects.filter(username="newshopper").count(), 1)
+
+    def test_password_confirmation_mismatch_is_rejected(self):
+        invalid_data = self.valid_registration_data | {"password2": "DifferentPassword123!"}
+
+        response = self.client.post(self.registration_url, invalid_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "The two password fields didn’t match.")
+        self.assertFalse(User.objects.filter(username="newshopper").exists())
+
+    def test_invalid_email_is_rejected(self):
+        invalid_data = self.valid_registration_data | {"email": "not-an-email"}
+
+        response = self.client.post(self.registration_url, invalid_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Enter a valid email address.")
+        self.assertFalse(User.objects.filter(username="newshopper").exists())
+
+    def test_invalid_form_does_not_create_user(self):
+        invalid_data = self.valid_registration_data | {"username": ""}
+
+        response = self.client.post(self.registration_url, invalid_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(email="newshopper@example.com").exists())

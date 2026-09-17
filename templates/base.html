@@ -16,10 +16,19 @@
                 <a class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'store:home' %}">Home</a>
                 <a class="{% if request.resolver_match.url_name == 'product_list' %}active{% endif %}" href="{% url 'store:product_list' %}">Products</a>
                 <a href="#login">Login</a>
+                <a class="{% if request.resolver_match.url_name == 'register' %}active{% endif %}" href="{% url 'store:register' %}">Register</a>
                 <a href="#cart">Cart</a>
             </div>
         </nav>
     </header>
+
+    {% if messages %}
+        <div class="site-messages container" aria-live="polite">
+            {% for message in messages %}
+                <p class="site-message">{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
 
     {% block content %}{% endblock %}
 

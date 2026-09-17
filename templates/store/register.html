@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Create Your Account | Simple E-commerce Store{% endblock %}
+
+{% block content %}
+<main class="registration-page">
+    <section class="registration-card container" aria-labelledby="registration-title">
+        <p class="eyebrow">Join the store</p>
+        <h1 id="registration-title">Create Your Account</h1>
+        <p class="registration-intro">Create an account to make your future shopping experience simpler.</p>
+
+        <form class="registration-form" method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="form-errors" role="alert">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            {% for field in form %}
+                <div class="form-field">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.help_text %}
+                        <p class="form-help">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                    {% if field.errors %}
+                        <div class="field-errors" role="alert">
+                            {{ field.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <button class="button registration-submit" type="submit">Register</button>
+        </form>
+
+        <p class="registration-links">
+            <a href="{% url 'store:home' %}">Home</a>
+            <span aria-hidden="true">|</span>
+            <a href="{% url 'store:product_list' %}">Products</a>
+            <span aria-hidden="true">|</span>
+            <a href="#login">Login</a>
+        </p>
+    </section>
+</main>
+{% endblock %}
