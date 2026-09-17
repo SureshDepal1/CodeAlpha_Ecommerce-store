@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.urls import reverse
 
 from .models import Product
 
@@ -65,6 +66,81 @@ class ProductListingTests(TestCase):
         self.create_product("Sold Out Product", stock=0)
 
         response = self.client.get("/products/")
+
+        self.assertContains(response, "Out of Stock")
+
+    def test_view_details_link_points_to_product_detail(self):
+        product = self.create_product("Detail Link Product")
+
+        response = self.client.get(reverse("store:product_list"))
+
+        self.assertContains(
+            response,
+            f'href="{reverse("store:product_detail", args=[product.pk])}"',
+        )
+
+
+class ProductDetailTests(TestCase):
+    def create_product(self, **overrides):
+        product_data = {
+            "name": "Detail Product",
+            "description": "A detailed product description.",
+            "price": "2499.50",
+            "category": "Featured",
+            "stock": 20,
+            "is_available": True,
+        }
+        product_data.update(overrides)
+        return Product.objects.create(**product_data)
+
+    def test_available_product_detail_loads(self):
+        product = self.create_product()
+
+        response = self.client.get(reverse("store:product_detail", args=[product.pk]))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_product_details_are_displayed(self):
+        product = self.create_product()
+
+        response = self.client.get(reverse("store:product_detail", args=[product.pk]))
+
+        self.assertContains(response, product.name)
+        self.assertContains(response, product.description)
+        self.assertContains(response, "2499.50")
+        self.assertContains(response, product.category)
+
+    def test_product_detail_uses_correct_template(self):
+        product = self.create_product()
+
+        response = self.client.get(reverse("store:product_detail", args=[product.pk]))
+
+        self.assertTemplateUsed(response, "store/product_detail.html")
+
+    def test_nonexistent_product_returns_404(self):
+        response = self.client.get(reverse("store:product_detail", args=[999999]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_unavailable_product_returns_404(self):
+        product = self.create_product(is_available=False)
+
+        response = self.client.get(reverse("store:product_detail", args=[product.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_in_stock_status_is_displayed(self):
+        product = self.create_product(stock=3)
+
+        response = self.client.get(reverse("store:product_detail", args=[product.pk]))
+
+        self.assertContains(response, "In Stock")
+        self.assertContains(response, "3 items available")
+
+    def test_out_of_stock_status_is_displayed(self):
+        product = self.create_product(stock=0)
+
+        response = self.client.get(reverse("store:product_detail", args=[product.pk]))
 
         self.assertContains(response, "Out of Stock")
 

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} | Simple E-commerce Store{% endblock %}
+
+{% block content %}
+<main class="product-detail-page">
+    <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="{% url 'store:product_list' %}">Back to Products</a>
+            <span aria-hidden="true">/</span>
+            <span>{{ product.name }}</span>
+        </nav>
+
+        <section class="product-detail" aria-labelledby="product-title">
+            <div class="product-detail__image">
+                {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                {% else %}
+                    <span>No image available</span>
+                {% endif %}
+            </div>
+
+            <div class="product-detail__content">
+                <p class="product-category">{{ product.category }}</p>
+                <h1 id="product-title">{{ product.name }}</h1>
+                <p class="product-detail__price">$ {{ product.price|floatformat:2 }}</p>
+                <div class="product-description">
+                    <h2>Description</h2>
+                    <p>{{ product.description }}</p>
+                </div>
+
+                {% if product.stock > 0 %}
+                    <p class="stock-status stock-status--available">In Stock</p>
+                    <p class="stock-quantity">{{ product.stock }} items available</p>
+                {% else %}
+                    <p class="stock-status stock-status--unavailable">Out of Stock</p>
+                {% endif %}
+
+                <div class="product-detail__actions">
+                    <a class="button" href="#">Add to Cart</a>
+                    <a class="button button--secondary" href="{% url 'store:product_list' %}">Back to Products</a>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}

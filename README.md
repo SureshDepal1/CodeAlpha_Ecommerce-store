@@ -103,6 +103,10 @@ python manage.py test
 
 Products are retrieved from the database and only available products are displayed at `/products/`. Product cards include product details, optional uploaded images, stock status, and a placeholder View Details button. A responsive product grid and automated listing tests have been added.
 
+## Step 4 - Product Details Page
+
+Available products can now be viewed individually at `/products/<product_id>/`. Product details are loaded from the database, while nonexistent or unavailable products return a standard 404 response. A responsive product detail layout and automated detail-page tests have been added.
+
 ## Development Status
 
-Step 3 - Product listing page completed. Product database, Django Admin, and product listing are available.
+Step 4 - Product details page completed. Product database, Django Admin, product listing, and available product details are available.

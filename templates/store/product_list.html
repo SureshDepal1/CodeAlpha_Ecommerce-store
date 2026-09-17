@@ -30,7 +30,7 @@
                         {% else %}
                             <p class="stock-status stock-status--unavailable">Out of Stock</p>
                         {% endif %}
-                        <a class="button product-card__action" href="#">View Details</a>
+                        <a class="button product-card__action" href="{% url 'store:product_detail' product.pk %}">View Details</a>
                     </div>
                 </article>
             {% empty %}
