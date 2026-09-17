@@ -268,3 +268,98 @@ class RegistrationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(email="newshopper@example.com").exists())
+
+
+class AuthenticationTests(TestCase):
+    login_url = reverse("store:login")
+    logout_url = reverse("store:logout")
+
+    def setUp(self):
+        self.username = "existing-shopper"
+        self.password = "A-valid-login-password-123!"
+        self.user = User.objects.create_user(
+            username=self.username,
+            password=self.password,
+        )
+
+    def test_login_page_loads(self):
+        response = self.client.get(self.login_url)
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_login_uses_correct_template(self):
+        response = self.client.get(self.login_url)
+
+        self.assertTemplateUsed(response, "store/login.html")
+
+    def test_login_form_contains_username_password_and_csrf(self):
+        response = self.client.get(self.login_url)
+
+        self.assertContains(response, 'name="username"')
+        self.assertContains(response, 'name="password"')
+        self.assertContains(response, 'type="password"')
+        self.assertContains(response, "csrfmiddlewaretoken")
+
+    def test_valid_login_authenticates_user_and_redirects_home(self):
+        response = self.client.post(
+            self.login_url,
+            {"username": self.username, "password": self.password},
+        )
+
+        self.assertRedirects(response, reverse("store:home"))
+        self.assertTrue(response.wsgi_request.user.is_authenticated)
+
+    def test_invalid_credentials_do_not_authenticate_user(self):
+        response = self.client.post(
+            self.login_url,
+            {"username": self.username, "password": "wrong-password"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
+        self.assertContains(response, "Please enter a correct username and password.")
+
+    def test_nonexistent_username_does_not_authenticate_user(self):
+        response = self.client.post(
+            self.login_url,
+            {"username": "does-not-exist", "password": self.password},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
+
+    def test_anonymous_navigation_contains_login_and_register(self):
+        response = self.client.get(reverse("store:home"))
+
+        self.assertContains(response, f'href="{self.login_url}"')
+        self.assertContains(response, f'href="{reverse("store:register")}"')
+        self.assertNotContains(response, "Welcome, existing-shopper")
+
+    def test_authenticated_navigation_contains_logout(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("store:home"))
+
+        self.assertContains(response, f'action="{self.logout_url}"')
+        self.assertContains(response, "Logout")
+        self.assertContains(response, "Welcome, existing-shopper")
+        self.assertNotContains(response, f'href="{self.login_url}"')
+
+    def test_logout_logs_user_out_and_redirects_home(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(self.logout_url)
+
+        self.assertRedirects(response, reverse("store:home"))
+        homepage = self.client.get(reverse("store:home"))
+        self.assertContains(homepage, f'href="{self.login_url}"')
+        self.assertNotContains(homepage, "Welcome, existing-shopper")
+
+    def test_get_logout_does_not_log_user_out(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.logout_url)
+
+        self.assertRedirects(response, reverse("store:home"))
+        homepage = self.client.get(reverse("store:home"))
+        self.assertContains(homepage, "Logout")

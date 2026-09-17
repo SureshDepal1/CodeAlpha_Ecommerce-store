@@ -1,7 +1,8 @@
 from django.contrib import messages
+from django.contrib.auth import login, logout
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import RegistrationForm
+from .forms import LoginForm, RegistrationForm
 from .models import Product
 
 
@@ -20,6 +21,9 @@ def product_detail(request, pk):
 
 
 def register(request):
+    if request.user.is_authenticated:
+        return redirect("store:home")
+
     if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():
@@ -30,3 +34,24 @@ def register(request):
         form = RegistrationForm()
 
     return render(request, "store/register.html", {"form": form})
+
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect("store:home")
+
+    if request.method == "POST":
+        form = LoginForm(request=request, data=request.POST)
+        if form.is_valid():
+            login(request, form.get_user())
+            return redirect("store:home")
+    else:
+        form = LoginForm(request=request)
+
+    return render(request, "store/login.html", {"form": form})
+
+
+def logout_view(request):
+    if request.method == "POST":
+        logout(request)
+    return redirect("store:home")

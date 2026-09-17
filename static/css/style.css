@@ -70,6 +70,31 @@ body {
     color: var(--brand);
 }
 
+.nav-welcome {
+    color: var(--brand-dark);
+    font-family: Arial, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.logout-form {
+    margin: 0;
+}
+
+.logout-form button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font: inherit;
+}
+
+.logout-form button:hover,
+.logout-form button:focus {
+    color: var(--brand);
+}
+
 .site-messages {
     padding-top: 1.25rem;
 }
