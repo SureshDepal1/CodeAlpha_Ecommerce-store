@@ -29,15 +29,19 @@
                     <p>{{ product.description }}</p>
                 </div>
 
-                {% if product.stock > 0 %}
+                {% if product.stock > 0 and product.is_available %}
                     <p class="stock-status stock-status--available">In Stock</p>
                     <p class="stock-quantity">{{ product.stock }} items available</p>
+                    <form method="post" action="{% url 'store:add_to_cart' product.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="button">Add to Cart</button>
+                    </form>
                 {% else %}
                     <p class="stock-status stock-status--unavailable">Out of Stock</p>
+                    <button type="button" class="button button--disabled" disabled>Out of Stock</button>
                 {% endif %}
 
                 <div class="product-detail__actions">
-                    <a class="button" href="#">Add to Cart</a>
                     <a class="button button--secondary" href="{% url 'store:product_list' %}">Back to Products</a>
                 </div>
             </div>

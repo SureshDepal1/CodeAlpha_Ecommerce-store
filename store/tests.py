@@ -363,3 +363,204 @@ class AuthenticationTests(TestCase):
         self.assertRedirects(response, reverse("store:home"))
         homepage = self.client.get(reverse("store:home"))
         self.assertContains(homepage, "Logout")
+
+
+class CartTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="cartuser", password="StrongPassword123!")
+        self.product_a = Product.objects.create(
+            name="Product A",
+            description="A sample product.",
+            price="100.00",
+            category="General",
+            stock=5,
+            is_available=True,
+        )
+        self.product_b = Product.objects.create(
+            name="Product B",
+            description="Another sample product.",
+            price="50.00",
+            category="General",
+            stock=3,
+            is_available=True,
+        )
+        self.cart_url = reverse("store:cart")
+        self.add_to_cart_url = reverse("store:add_to_cart", args=[self.product_a.pk])
+
+    def test_authenticated_user_can_access_cart(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.cart_url)
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_anonymous_user_accessing_cart_is_redirected_to_login(self):
+        response = self.client.get(self.cart_url)
+
+        self.assertRedirects(response, f"{reverse('store:login')}?next={self.cart_url}")
+
+    def test_authenticated_user_can_add_available_product(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(self.add_to_cart_url)
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertEqual(self.client.session.get("cart", {}), {str(self.product_a.pk): 1})
+
+    def test_adding_same_product_twice_increases_quantity(self):
+        self.client.force_login(self.user)
+
+        self.client.post(self.add_to_cart_url)
+        self.client.post(self.add_to_cart_url)
+
+        self.assertEqual(self.client.session.get("cart", {}), {str(self.product_a.pk): 2})
+
+    def test_adding_a_product_cannot_exceed_available_stock(self):
+        self.product_a.stock = 2
+        self.product_a.save()
+        self.client.force_login(self.user)
+
+        self.client.post(self.add_to_cart_url)
+        self.client.post(self.add_to_cart_url)
+        self.client.post(self.add_to_cart_url)
+
+        self.assertEqual(self.client.session.get("cart", {}), {str(self.product_a.pk): 2})
+
+    def test_out_of_stock_product_cannot_be_added(self):
+        self.product_a.stock = 0
+        self.product_a.save()
+        self.client.force_login(self.user)
+
+        response = self.client.post(self.add_to_cart_url)
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertNotIn(str(self.product_a.pk), self.client.session.get("cart", {}))
+
+    def test_unavailable_product_cannot_be_added(self):
+        self.product_a.is_available = False
+        self.product_a.save()
+        self.client.force_login(self.user)
+
+        response = self.client.post(self.add_to_cart_url)
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertNotIn(str(self.product_a.pk), self.client.session.get("cart", {}))
+
+    def test_nonexistent_product_returns_404(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("store:add_to_cart", args=[999999]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_anonymous_user_cannot_add_a_product_to_cart(self):
+        response = self.client.post(self.add_to_cart_url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_cart_page_displays_product_name(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 2}
+        session.save()
+
+        response = self.client.get(self.cart_url)
+
+        self.assertContains(response, self.product_a.name)
+
+    def test_cart_page_displays_product_price(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 2}
+        session.save()
+
+        response = self.client.get(self.cart_url)
+
+        self.assertContains(response, "100.00")
+
+    def test_cart_page_displays_quantity(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 2}
+        session.save()
+
+        response = self.client.get(self.cart_url)
+
+        self.assertContains(response, "2")
+
+    def test_cart_page_displays_subtotal(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 2}
+        session.save()
+
+        response = self.client.get(self.cart_url)
+
+        self.assertContains(response, "200.00")
+
+    def test_cart_page_calculates_total_correctly(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 2, str(self.product_b.pk): 1}
+        session.save()
+
+        response = self.client.get(self.cart_url)
+
+        self.assertContains(response, "250.00")
+
+    def test_empty_cart_displays_empty_cart_message(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.cart_url)
+
+        self.assertContains(response, "Your cart is empty.")
+
+    def test_cart_count_is_correct(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 2, str(self.product_b.pk): 3}
+        session.save()
+
+        response = self.client.get(reverse("store:home"))
+
+        self.assertContains(response, "Cart (5)")
+
+    def test_cart_count_is_zero_when_cart_is_empty(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("store:home"))
+
+        self.assertContains(response, "Cart (0)")
+
+    def test_product_price_comes_from_database_not_session(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+        self.product_a.price = "250.00"
+        self.product_a.save()
+
+        response = self.client.get(self.cart_url)
+
+        self.assertContains(response, "250.00")
+
+    def test_unavailable_product_in_session_does_not_crash_cart_page(self):
+        self.client.force_login(self.user)
+        self.product_a.is_available = False
+        self.product_a.save()
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+
+        response = self.client.get(self.cart_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Your cart is empty.")
+
+    def test_add_to_cart_requires_post(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.add_to_cart_url)
+
+        self.assertEqual(response.status_code, 405)

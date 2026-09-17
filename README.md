@@ -1,6 +1,6 @@
 # Simple E-commerce Store
 
-A beginner-friendly Django foundation for a simple online store. The project is currently in development and this repository contains Step 6: Django authentication with user registration, login, and logout.
+A beginner-friendly Django foundation for a simple online store. The project is currently in development and this repository contains Step 7: Basic Shopping Cart using Django sessions.
 
 ## Features
 
@@ -115,6 +115,10 @@ Django's built-in authentication system now supports user registration at `/regi
 
 Django's built-in authentication system now supports login at `/login/` and logout at `/logout/`. Django sessions manage authentication state, and built-in form validation and authentication tests cover valid and invalid login attempts. Shopping cart and other future features remain planned.
 
+## Step 7 - Basic Shopping Cart
+
+The cart uses Django sessions to store product IDs and quantities, while the Product table remains the source of truth for pricing, availability, stock, and images. Authenticated users can add available products to the cart, the cart page shows each item's quantity, subtotal, and the total, and the navigation displays the live total item count. Stock validation prevents quantities from exceeding available inventory, and checkout remains planned for a future step.
+
 ## Development Status
 
-Step 6 - User login and logout completed. Product database, Django Admin, product listing, product details, registration, login, and logout are available.
+Step 7 - Basic shopping cart completed. Product database, Django Admin, product listing, product details, registration, login, logout, and session-based cart functionality are available.

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Your Cart | Simple E-commerce Store{% endblock %}
+
+{% block content %}
+<main class="cart-page">
+    <div class="container">
+        <section class="cart-header" aria-labelledby="cart-title">
+            <p class="eyebrow">Your basket</p>
+            <h1 id="cart-title">Shopping Cart</h1>
+        </section>
+
+        {% if cart_items %}
+            <div class="cart-layout">
+                <div class="cart-items" aria-label="Cart items">
+                    {% for item in cart_items %}
+                        <article class="cart-item">
+                            <div class="cart-item__image">
+                                {% if item.product.image %}
+                                    <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+                                {% else %}
+                                    <span>No image available</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="cart-item__details">
+                                <h2>{{ item.product.name }}</h2>
+                                <p class="cart-item__price">Price: ${{ item.product.price|floatformat:2 }}</p>
+                                <p class="cart-item__quantity">Quantity: {{ item.quantity }}</p>
+                                <p class="cart-item__subtotal">Subtotal: ${{ item.subtotal|floatformat:2 }}</p>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+
+                <aside class="cart-summary">
+                    <h2>Cart Total</h2>
+                    <p class="cart-summary__total">Total: ${{ total|floatformat:2 }}</p>
+                    <a class="button button--secondary" href="{% url 'store:product_list' %}">Continue Shopping</a>
+                </aside>
+            </div>
+        {% else %}
+            <div class="empty-cart" aria-live="polite">
+                <p>Your cart is empty.</p>
+                <a class="button" href="{% url 'store:product_list' %}">Continue Shopping</a>
+            </div>
+        {% endif %}
+    </div>
+</main>
+{% endblock %}
