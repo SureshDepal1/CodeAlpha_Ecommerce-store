@@ -1,26 +1,8 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Simple E-commerce Store">
-    <title>Simple E-commerce Store</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-</head>
-<body>
-    <header class="site-header">
-        <nav class="navbar container" aria-label="Main navigation">
-            <a class="brand" href="{% url 'store:home' %}">Simple E-commerce Store</a>
-            <div class="nav-links">
-                <a class="active" href="{% url 'store:home' %}">Home</a>
-                <a href="#products">Products</a>
-                <a href="#login">Login</a>
-                <a href="#cart">Cart</a>
-            </div>
-        </nav>
-    </header>
+{% extends "base.html" %}
 
+{% block title %}Simple E-commerce Store{% endblock %}
+
+{% block content %}
     <main>
         <section class="hero" aria-labelledby="hero-title">
             <div class="hero-content container">
@@ -30,24 +12,14 @@
                     Welcome to Simple E-commerce Store, a friendly place to discover
                     useful products and enjoy a straightforward shopping experience.
                 </p>
-                <a class="button" href="#products">Shop Now</a>
+                <a class="button" href="{% url 'store:product_list' %}">Shop Now</a>
             </div>
         </section>
 
         <section class="intro container" id="products" aria-labelledby="intro-title">
             <p class="eyebrow">Coming soon</p>
             <h2 id="intro-title">Your next favorite find is on its way.</h2>
-            <p>Product listings and details will be available here as the store grows.</p>
+                <p>Browse the latest products in our growing store.</p>
         </section>
     </main>
-
-    <footer class="site-footer">
-        <div class="container footer-content">
-            <p>&copy; 2026 Simple E-commerce Store</p>
-            <p>Built with care for a simpler online shop.</p>
-        </div>
-    </footer>
-
-    <script src="{% static 'js/main.js' %}"></script>
-</body>
-</html>
+{% endblock %}

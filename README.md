@@ -1,6 +1,6 @@
 # Simple E-commerce Store
 
-A beginner-friendly Django foundation for a simple online store. The project is currently in development and this repository contains Step 2: the Product database and Django Admin foundation.
+A beginner-friendly Django foundation for a simple online store. The project is currently in development and this repository contains Step 3: the database-backed Product Listing page.
 
 ## Features
 
@@ -99,6 +99,10 @@ To test the Product model, run:
 python manage.py test
 ```
 
+## Step 3 - Product Listing Page
+
+Products are retrieved from the database and only available products are displayed at `/products/`. Product cards include product details, optional uploaded images, stock status, and a placeholder View Details button. A responsive product grid and automated listing tests have been added.
+
 ## Development Status
 
-Step 2 - Product database and Django Admin completed.
+Step 3 - Product listing page completed. Product database, Django Admin, and product listing are available.

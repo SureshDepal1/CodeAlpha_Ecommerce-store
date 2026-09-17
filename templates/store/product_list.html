@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Our Products | Simple E-commerce Store{% endblock %}
+
+{% block content %}
+<main class="products-page">
+    <section class="page-heading container" aria-labelledby="products-title">
+        <p class="eyebrow">Fresh from the store</p>
+        <h1 id="products-title">Our Products</h1>
+        <p>Explore our available products and find something useful for your day.</p>
+    </section>
+
+    <section class="product-listing container" aria-label="Available products">
+        <div class="product-grid">
+            {% for product in products %}
+                <article class="product-card">
+                    <div class="product-image">
+                        {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                        {% else %}
+                            <span>No image available</span>
+                        {% endif %}
+                    </div>
+                    <div class="product-card__body">
+                        <p class="product-category">{{ product.category }}</p>
+                        <h2>{{ product.name }}</h2>
+                        <p class="product-price">$ {{ product.price|floatformat:2 }}</p>
+                        {% if product.stock > 0 %}
+                            <p class="stock-status stock-status--available">In Stock</p>
+                        {% else %}
+                            <p class="stock-status stock-status--unavailable">Out of Stock</p>
+                        {% endif %}
+                        <a class="button product-card__action" href="#">View Details</a>
+                    </div>
+                </article>
+            {% empty %}
+                <p class="empty-state">No products are available at the moment.</p>
+            {% endfor %}
+        </div>
+    </section>
+</main>
+{% endblock %}

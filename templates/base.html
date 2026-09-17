@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Simple E-commerce Store">
+    <title>{% block title %}Simple E-commerce Store{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <header class="site-header">
+        <nav class="navbar container" aria-label="Main navigation">
+            <a class="brand" href="{% url 'store:home' %}">Simple E-commerce Store</a>
+            <div class="nav-links">
+                <a class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'store:home' %}">Home</a>
+                <a class="{% if request.resolver_match.url_name == 'product_list' %}active{% endif %}" href="{% url 'store:product_list' %}">Products</a>
+                <a href="#login">Login</a>
+                <a href="#cart">Cart</a>
+            </div>
+        </nav>
+    </header>
+
+    {% block content %}{% endblock %}
+
+    <footer class="site-footer">
+        <div class="container footer-content">
+            <p>&copy; 2026 Simple E-commerce Store</p>
+            <p>Built with care for a simpler online shop.</p>
+        </div>
+    </footer>
+
+    <script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>
