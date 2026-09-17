@@ -564,3 +564,264 @@ class CartTests(TestCase):
         response = self.client.get(self.add_to_cart_url)
 
         self.assertEqual(response.status_code, 405)
+
+
+class CartManagementTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="cartmanager", password="StrongPassword123!")
+        self.product = Product.objects.create(
+            name="Manageable Product",
+            description="A product for inventory management.",
+            price="15.00",
+            category="General",
+            stock=5,
+            is_available=True,
+        )
+        self.product_with_2_stock = Product.objects.create(
+            name="Limited Product",
+            description="Only a few left.",
+            price="9.00",
+            category="General",
+            stock=2,
+            is_available=True,
+        )
+        self.cart_url = reverse("store:cart")
+        self.update_url = reverse("store:update_cart", args=[self.product.pk])
+        self.increase_url = reverse("store:increase_cart_quantity", args=[self.product.pk])
+        self.decrease_url = reverse("store:decrease_cart_quantity", args=[self.product.pk])
+        self.remove_url = reverse("store:remove_from_cart", args=[self.product.pk])
+
+    def test_authenticated_user_can_update_cart_quantity(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 1}
+        session.save()
+
+        response = self.client.post(self.update_url, {"quantity": 3})
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertEqual(self.client.session["cart"][str(self.product.pk)], 3)
+
+    def test_update_quantity_cannot_exceed_stock(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 1}
+        session.save()
+
+        response = self.client.post(self.update_url, {"quantity": 10})
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertEqual(self.client.session["cart"][str(self.product.pk)], self.product.stock)
+
+    def test_update_quantity_rejects_zero(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 1}
+        session.save()
+
+        response = self.client.post(self.update_url, {"quantity": 0})
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertEqual(self.client.session["cart"][str(self.product.pk)], 1)
+
+    def test_update_quantity_rejects_negative_values(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 2}
+        session.save()
+
+        response = self.client.post(self.update_url, {"quantity": -2})
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertEqual(self.client.session["cart"][str(self.product.pk)], 2)
+
+    def test_update_quantity_rejects_non_numeric_values(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 2}
+        session.save()
+
+        response = self.client.post(self.update_url, {"quantity": "abc"})
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertEqual(self.client.session["cart"][str(self.product.pk)], 2)
+
+    def test_update_quantity_requires_authentication(self):
+        response = self.client.post(self.update_url, {"quantity": 3})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_increase_quantity_works(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 1}
+        session.save()
+
+        response = self.client.post(self.increase_url)
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertEqual(self.client.session["cart"][str(self.product.pk)], 2)
+
+    def test_increase_quantity_cannot_exceed_stock(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_with_2_stock.pk): 2}
+        session.save()
+
+        response = self.client.post(reverse("store:increase_cart_quantity", args=[self.product_with_2_stock.pk]))
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertEqual(self.client.session["cart"][str(self.product_with_2_stock.pk)], 2)
+
+    def test_increase_quantity_requires_authentication(self):
+        response = self.client.post(self.increase_url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_decrease_quantity_works(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 3}
+        session.save()
+
+        response = self.client.post(self.decrease_url)
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertEqual(self.client.session["cart"][str(self.product.pk)], 2)
+
+    def test_decrease_from_one_removes_item(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 1}
+        session.save()
+
+        response = self.client.post(self.decrease_url)
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertNotIn(str(self.product.pk), self.client.session.get("cart", {}))
+
+    def test_decrease_quantity_requires_authentication(self):
+        response = self.client.post(self.decrease_url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_remove_item_works(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 2, str(self.product_with_2_stock.pk): 1}
+        session.save()
+
+        response = self.client.post(self.remove_url)
+
+        self.assertRedirects(response, self.cart_url)
+        self.assertNotIn(str(self.product.pk), self.client.session.get("cart", {}))
+
+    def test_removing_item_updates_cart_count(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 2, str(self.product_with_2_stock.pk): 1}
+        session.save()
+
+        self.client.post(self.remove_url)
+
+        self.assertEqual(sum(self.client.session["cart"].values()), 1)
+
+    def test_remove_requires_authentication(self):
+        response = self.client.post(self.remove_url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_cart_page_displays_quantity_controls(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 2}
+        session.save()
+
+        response = self.client.get(self.cart_url)
+
+        self.assertContains(response, "Update")
+        self.assertContains(response, "Remove")
+        self.assertContains(response, 'name="quantity"')
+
+    def test_cart_calculates_subtotal_and_total_correctly(self):
+        self.client.force_login(self.user)
+        self.product_with_2_stock.stock = 3
+        self.product_with_2_stock.save()
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 2, str(self.product_with_2_stock.pk): 3}
+        session.save()
+
+        response = self.client.get(self.cart_url)
+
+        self.assertContains(response, "30.00")
+        self.assertContains(response, "57.00")
+
+    def test_cart_count_is_correct_after_update(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 1}
+        session.save()
+
+        self.client.post(self.update_url, {"quantity": 4})
+
+        self.assertEqual(sum(self.client.session["cart"].values()), 4)
+
+    def test_cart_count_is_correct_after_increase(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 1}
+        session.save()
+
+        self.client.post(self.increase_url)
+
+        self.assertEqual(sum(self.client.session["cart"].values()), 2)
+
+    def test_cart_count_is_correct_after_decrease(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 3}
+        session.save()
+
+        self.client.post(self.decrease_url)
+
+        self.assertEqual(sum(self.client.session["cart"].values()), 2)
+
+    def test_cart_count_is_correct_after_removal(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): 2, str(self.product_with_2_stock.pk): 1}
+        session.save()
+
+        self.client.post(self.remove_url)
+
+        self.assertEqual(sum(self.client.session["cart"].values()), 1)
+
+    def test_cart_mutation_endpoints_require_post(self):
+        self.client.force_login(self.user)
+
+        self.assertEqual(self.client.get(self.update_url).status_code, 405)
+        self.assertEqual(self.client.get(self.increase_url).status_code, 405)
+        self.assertEqual(self.client.get(self.decrease_url).status_code, 405)
+        self.assertEqual(self.client.get(self.remove_url).status_code, 405)
+
+    def test_nonexistent_product_id_is_handled_safely(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("store:update_cart", args=[999999]), {"quantity": 2})
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_malformed_cart_data_does_not_crash(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product.pk): "abc", "notanumber": "3", "999": 0}
+        session.save()
+
+        response = self.client.get(self.cart_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Your cart is empty.")

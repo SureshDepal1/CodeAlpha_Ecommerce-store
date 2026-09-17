@@ -119,6 +119,10 @@ Django's built-in authentication system now supports login at `/login/` and logo
 
 The cart uses Django sessions to store product IDs and quantities, while the Product table remains the source of truth for pricing, availability, stock, and images. Authenticated users can add available products to the cart, the cart page shows each item's quantity, subtotal, and the total, and the navigation displays the live total item count. Stock validation prevents quantities from exceeding available inventory, and checkout remains planned for a future step.
 
+## Step 8 - Cart Management
+
+Authenticated users can now increase, decrease, update, and remove products from their Django session cart. Quantity updates respect product stock limits, the cart total is recalculated from current database prices, and the cart count stays synchronized with the live session data. Checkout and order processing remain planned for later steps.
+
 ## Development Status
 
-Step 7 - Basic shopping cart completed. Product database, Django Admin, product listing, product details, registration, login, logout, and session-based cart functionality are available.
+Step 8 - Cart management completed. Product database, Django Admin, product listing, product details, registration, login, logout, and session-based cart management are available.

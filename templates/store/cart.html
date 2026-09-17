@@ -26,8 +26,39 @@
                             <div class="cart-item__details">
                                 <h2>{{ item.product.name }}</h2>
                                 <p class="cart-item__price">Price: ${{ item.product.price|floatformat:2 }}</p>
-                                <p class="cart-item__quantity">Quantity: {{ item.quantity }}</p>
+
+                                <div class="cart-quantity-controls" aria-label="Quantity controls for {{ item.product.name }}">
+                                    <form method="post" action="{% url 'store:decrease_cart_quantity' item.product.pk %}" class="cart-action-form">
+                                        {% csrf_token %}
+                                        <button type="submit" aria-label="Decrease quantity for {{ item.product.name }}" {% if item.quantity == 1 %}disabled{% endif %}>-</button>
+                                    </form>
+
+                                    <form method="post" action="{% url 'store:update_cart' item.product.pk %}" class="cart-update-form">
+                                        {% csrf_token %}
+                                        <label class="sr-only" for="quantity-{{ item.product.pk }}">Quantity for {{ item.product.name }}</label>
+                                        <input
+                                            id="quantity-{{ item.product.pk }}"
+                                            type="number"
+                                            name="quantity"
+                                            value="{{ item.quantity }}"
+                                            min="1"
+                                            max="{{ item.product.stock }}"
+                                            aria-label="Quantity for {{ item.product.name }}">
+                                        <button type="submit">Update</button>
+                                    </form>
+
+                                    <form method="post" action="{% url 'store:increase_cart_quantity' item.product.pk %}" class="cart-action-form">
+                                        {% csrf_token %}
+                                        <button type="submit" aria-label="Increase quantity for {{ item.product.name }}" {% if item.quantity == item.product.stock %}disabled{% endif %}>+</button>
+                                    </form>
+                                </div>
+
                                 <p class="cart-item__subtotal">Subtotal: ${{ item.subtotal|floatformat:2 }}</p>
+
+                                <form method="post" action="{% url 'store:remove_from_cart' item.product.pk %}" class="cart-remove-form">
+                                    {% csrf_token %}
+                                    <button type="submit">Remove</button>
+                                </form>
                             </div>
                         </article>
                     {% endfor %}
