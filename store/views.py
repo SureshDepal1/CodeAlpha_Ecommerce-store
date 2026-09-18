@@ -6,8 +6,66 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from .forms import LoginForm, RegistrationForm
+from .forms import CheckoutForm, LoginForm, RegistrationForm
 from .models import Product
+
+
+def _get_checkout_cart_summary(request):
+    cart = _normalize_cart(request.session)
+    if not cart:
+        return None
+
+    cart_items = []
+    total = Decimal("0.00")
+    cleaned_cart = {}
+    has_forbidden_item = False
+
+    for raw_product_id, quantity in cart.items():
+        try:
+            product_id = int(raw_product_id)
+        except (TypeError, ValueError):
+            continue
+
+        try:
+            item_quantity = int(quantity)
+        except (TypeError, ValueError):
+            continue
+
+        product = Product.objects.filter(pk=product_id).first()
+        if product is None:
+            continue
+
+        if not product.is_available or product.stock <= 0:
+            has_forbidden_item = True
+            continue
+
+        if item_quantity > product.stock:
+            has_forbidden_item = True
+            continue
+
+        final_quantity = item_quantity
+        if final_quantity <= 0:
+            continue
+
+        cleaned_cart[str(product.id)] = final_quantity
+
+        subtotal = product.price * final_quantity
+        cart_items.append(
+            {
+                "product": product,
+                "quantity": final_quantity,
+                "subtotal": subtotal,
+            }
+        )
+        total += subtotal
+
+    request.session["cart"] = cleaned_cart
+    request.session.modified = True
+
+    if not cart_items:
+        return None
+
+    return {"cart_items": cart_items, "total": total, "invalid": has_forbidden_item}
 
 
 def _normalize_cart(session):
@@ -297,3 +355,50 @@ def logout_view(request):
     if request.method == "POST":
         logout(request)
     return redirect("store:home")
+
+
+@login_required(login_url="store:login")
+def checkout(request):
+    cart_summary = _get_checkout_cart_summary(request)
+    if cart_summary is None:
+        messages.info(request, "Your cart is empty.")
+        return redirect("store:cart")
+
+    if cart_summary["invalid"]:
+        messages.error(request, "One or more items in your cart are no longer available in the requested quantity.")
+        return redirect("store:cart")
+
+    if request.method == "POST":
+        form = CheckoutForm(request.POST)
+        if form.is_valid():
+            return render(
+                request,
+                "store/checkout.html",
+                {
+                    "form": form,
+                    "cart_items": cart_summary["cart_items"],
+                    "total": cart_summary["total"],
+                    "review_only": True,
+                },
+            )
+
+        return render(
+            request,
+            "store/checkout.html",
+            {
+                "form": form,
+                "cart_items": cart_summary["cart_items"],
+                "total": cart_summary["total"],
+            },
+        )
+
+    form = CheckoutForm(initial={"email": request.user.email or ""})
+    return render(
+        request,
+        "store/checkout.html",
+        {
+            "form": form,
+            "cart_items": cart_summary["cart_items"],
+            "total": cart_summary["total"],
+        },
+    )

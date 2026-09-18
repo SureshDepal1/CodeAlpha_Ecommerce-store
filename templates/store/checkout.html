@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout | Simple E-commerce Store{% endblock %}
+
+{% block content %}
+<main class="checkout-page">
+    <div class="container checkout-layout">
+        <section class="checkout-form-panel">
+            <p class="eyebrow">Secure checkout</p>
+            <h1>Checkout</h1>
+
+            <form method="post" class="checkout-form" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="form-errors">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="form-grid">
+                    <div class="field-group">
+                        <label for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+                        {{ form.full_name }}
+                        {% if form.full_name.errors %}
+                            <div class="field-error">{{ form.full_name.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="field-group">
+                        <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="field-error">{{ form.email.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="field-group">
+                        <label for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+                        {{ form.phone }}
+                        {% if form.phone.errors %}
+                            <div class="field-error">{{ form.phone.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="field-group full-width">
+                        <label for="{{ form.address.id_for_label }}">{{ form.address.label }}</label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                            <div class="field-error">{{ form.address.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="field-group">
+                        <label for="{{ form.city.id_for_label }}">{{ form.city.label }}</label>
+                        {{ form.city }}
+                        {% if form.city.errors %}
+                            <div class="field-error">{{ form.city.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="field-group">
+                        <label for="{{ form.state.id_for_label }}">{{ form.state.label }}</label>
+                        {{ form.state }}
+                        {% if form.state.errors %}
+                            <div class="field-error">{{ form.state.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="field-group">
+                        <label for="{{ form.postal_code.id_for_label }}">{{ form.postal_code.label }}</label>
+                        {{ form.postal_code }}
+                        {% if form.postal_code.errors %}
+                            <div class="field-error">{{ form.postal_code.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="field-group">
+                        <label for="{{ form.country.id_for_label }}">{{ form.country.label }}</label>
+                        {{ form.country }}
+                        {% if form.country.errors %}
+                            <div class="field-error">{{ form.country.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <button type="submit" class="button">Continue to Review</button>
+            </form>
+        </section>
+
+        <aside class="checkout-summary">
+            <h2>Order Summary</h2>
+            {% for item in cart_items %}
+                <div class="checkout-line">
+                    <div>
+                        <strong>{{ item.product.name }}</strong>
+                        <span>Price: ${{ item.product.price|floatformat:2 }}</span>
+                        <span>Qty: {{ item.quantity }}</span>
+                    </div>
+                    <span>${{ item.subtotal|floatformat:2 }}</span>
+                </div>
+            {% endfor %}
+
+            <div class="checkout-total-row">
+                <span>Total</span>
+                <strong>${{ total|floatformat:2 }}</strong>
+            </div>
+
+            {% if review_only %}
+                <div class="review-panel">
+                    <h3>Review Your Order</h3>
+                    <p><strong>Name:</strong> {{ form.full_name.value }}</p>
+                    <p><strong>Email:</strong> {{ form.email.value }}</p>
+                    <p><strong>Phone:</strong> {{ form.phone.value }}</p>
+                    <p><strong>Address:</strong> {{ form.address.value }}</p>
+                    <p><strong>City:</strong> {{ form.city.value }}</p>
+                    <p><strong>State:</strong> {{ form.state.value }}</p>
+                    <p><strong>Postal code:</strong> {{ form.postal_code.value }}</p>
+                    <p><strong>Country:</strong> {{ form.country.value }}</p>
+                    <p class="review-note">This is a review-only checkout step. No order has been created yet.</p>
+                </div>
+            {% endif %}
+        </aside>
+    </div>
+</main>
+{% endblock %}

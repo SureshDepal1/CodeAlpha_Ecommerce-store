@@ -825,3 +825,352 @@ class CartManagementTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Your cart is empty.")
+
+
+class CheckoutTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="checkoutuser",
+            password="StrongPassword123!",
+            email="checkoutuser@example.com",
+        )
+        self.product_a = Product.objects.create(
+            name="Checkout Product A",
+            description="A checkout item.",
+            price="100.00",
+            category="General",
+            stock=5,
+            is_available=True,
+        )
+        self.product_b = Product.objects.create(
+            name="Checkout Product B",
+            description="Another checkout item.",
+            price="50.00",
+            category="General",
+            stock=3,
+            is_available=True,
+        )
+        self.checkout_url = reverse("store:checkout")
+
+    def test_authenticated_user_can_access_checkout(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_anonymous_user_accessing_checkout_is_redirected_to_login(self):
+        response = self.client.get(self.checkout_url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_empty_cart_cannot_proceed_to_checkout(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertRedirects(response, reverse("store:cart"))
+
+    def test_empty_cart_displays_message_when_redirected(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.checkout_url)
+        follow_response = self.client.get(reverse("store:cart"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertContains(follow_response, "Your cart is empty.")
+
+    def test_checkout_form_contains_expected_fields(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertContains(response, 'name="full_name"')
+        self.assertContains(response, 'name="email"')
+        self.assertContains(response, 'name="phone"')
+        self.assertContains(response, 'name="address"')
+        self.assertContains(response, 'name="city"')
+        self.assertContains(response, 'name="state"')
+        self.assertContains(response, 'name="postal_code"')
+        self.assertContains(response, 'name="country"')
+        self.assertContains(response, "csrfmiddlewaretoken")
+
+    def test_full_name_is_required(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+
+        response = self.client.post(
+            self.checkout_url,
+            {
+                "full_name": "",
+                "email": "user@example.com",
+                "phone": "03001234567",
+                "address": "123 Main Street",
+                "city": "Karachi",
+                "state": "Sindh",
+                "postal_code": "74000",
+                "country": "Pakistan",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This field is required.")
+
+    def test_email_is_required(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+
+        response = self.client.post(
+            self.checkout_url,
+            {
+                "full_name": "Test User",
+                "email": "",
+                "phone": "03001234567",
+                "address": "123 Main Street",
+                "city": "Karachi",
+                "state": "Sindh",
+                "postal_code": "74000",
+                "country": "Pakistan",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This field is required.")
+
+    def test_invalid_email_is_rejected(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+
+        response = self.client.post(
+            self.checkout_url,
+            {
+                "full_name": "Test User",
+                "email": "not-an-email",
+                "phone": "03001234567",
+                "address": "123 Main Street",
+                "city": "Karachi",
+                "state": "Sindh",
+                "postal_code": "74000",
+                "country": "Pakistan",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Enter a valid email address.")
+
+    def test_phone_is_required(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+
+        response = self.client.post(
+            self.checkout_url,
+            {
+                "full_name": "Test User",
+                "email": "user@example.com",
+                "phone": "",
+                "address": "123 Main Street",
+                "city": "Karachi",
+                "state": "Sindh",
+                "postal_code": "74000",
+                "country": "Pakistan",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This field is required.")
+
+    def test_address_is_required(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+
+        response = self.client.post(
+            self.checkout_url,
+            {
+                "full_name": "Test User",
+                "email": "user@example.com",
+                "phone": "03001234567",
+                "address": "",
+                "city": "Karachi",
+                "state": "Sindh",
+                "postal_code": "74000",
+                "country": "Pakistan",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This field is required.")
+
+    def test_valid_checkout_data_passes_form_validation(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 2, str(self.product_b.pk): 1}
+        session.save()
+
+        response = self.client.post(
+            self.checkout_url,
+            {
+                "full_name": "Test User",
+                "email": "test@example.com",
+                "phone": "03001234567",
+                "address": "123 Test Street",
+                "city": "Karachi",
+                "state": "Sindh",
+                "postal_code": "74000",
+                "country": "Pakistan",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Review Your Order")
+        self.assertContains(response, "Test User")
+
+    def test_user_email_is_prefilled_on_checkout_form(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertContains(response, 'value="checkoutuser@example.com"')
+
+    def test_checkout_displays_product_name_and_quantity(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 2}
+        session.save()
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertContains(response, self.product_a.name)
+        self.assertContains(response, "2")
+
+    def test_checkout_displays_product_price_and_subtotal(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 2}
+        session.save()
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertContains(response, "100.00")
+        self.assertContains(response, "200.00")
+
+    def test_checkout_calculates_total_correctly(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 2, str(self.product_b.pk): 3}
+        session.save()
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertContains(response, "350.00")
+
+    def test_checkout_total_comes_from_database_prices(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+        self.product_a.price = "250.00"
+        self.product_a.save()
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertContains(response, "250.00")
+
+    def test_checkout_blocks_when_cart_quantity_exceeds_stock(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 5}
+        session.save()
+        self.product_a.stock = 2
+        self.product_a.save()
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_checkout_blocks_unavailable_product(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+        self.product_a.is_available = False
+        self.product_a.save()
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_checkout_handles_stale_cart_product_safely(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1, "999": 2}
+        session.save()
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_checkout_post_requires_post(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_checkout_form_has_csrf_protection(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 1}
+        session.save()
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertContains(response, "csrfmiddlewaretoken")
+
+    def test_valid_checkout_submission_keeps_cart_and_stock_unchanged(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["cart"] = {str(self.product_a.pk): 2}
+        session.save()
+        original_stock = self.product_a.stock
+
+        response = self.client.post(
+            self.checkout_url,
+            {
+                "full_name": "Test User",
+                "email": "test@example.com",
+                "phone": "03001234567",
+                "address": "123 Test Street",
+                "city": "Karachi",
+                "state": "Sindh",
+                "postal_code": "74000",
+                "country": "Pakistan",
+            },
+        )
+
+        self.product_a.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.session["cart"][str(self.product_a.pk)], 2)
+        self.assertEqual(self.product_a.stock, original_stock)

@@ -67,6 +67,7 @@
                 <aside class="cart-summary">
                     <h2>Cart Total</h2>
                     <p class="cart-summary__total">Total: ${{ total|floatformat:2 }}</p>
+                    <a class="button button--secondary" href="{% url 'store:checkout' %}">Proceed to Checkout</a>
                     <a class="button button--secondary" href="{% url 'store:product_list' %}">Continue Shopping</a>
                 </aside>
             </div>
