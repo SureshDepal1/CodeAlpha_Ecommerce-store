@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import DatabaseError, transaction
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -499,6 +500,26 @@ def checkout(request):
             "total": cart_summary["total"],
         },
     )
+
+
+@login_required(login_url="store:login")
+def order_history(request):
+    orders = (
+        Order.objects.filter(user=request.user)
+        .annotate(item_count=Count("items"))
+        .order_by("-created_at")
+    )
+    return render(request, "store/order_history.html", {"orders": orders})
+
+
+@login_required(login_url="store:login")
+def order_detail(request, pk):
+    order = get_object_or_404(
+        Order.objects.prefetch_related("items__product"),
+        pk=pk,
+        user=request.user,
+    )
+    return render(request, "store/order_detail.html", {"order": order})
 
 
 @login_required(login_url="store:login")

@@ -433,6 +433,199 @@ h1 {
     text-align: center;
 }
 
+.orders-page {
+    padding: 5rem 0 6rem;
+}
+
+.order-list {
+    display: grid;
+    gap: 1rem;
+    max-width: 860px;
+}
+
+.order-card,
+.order-panel {
+    padding: 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+    box-shadow: 0 8px 24px rgba(31, 41, 51, 0.05);
+}
+
+.order-card__header,
+.order-card__summary,
+.order-detail-header,
+.order-total-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+}
+
+.order-card__number,
+.order-card__date {
+    margin-bottom: 0.25rem;
+}
+
+.order-card__number {
+    font-size: 1.35rem;
+}
+
+.order-card__date,
+.order-card__summary,
+.order-item__details p {
+    color: var(--muted);
+    font-family: Arial, sans-serif;
+    font-size: 0.85rem;
+}
+
+.order-card__summary {
+    margin: 1.25rem 0;
+    padding: 1rem 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+.order-card__summary strong,
+.order-total-row strong,
+.order-item__subtotal {
+    color: var(--ink);
+    font-family: Arial, sans-serif;
+    font-size: 1.1rem;
+}
+
+.order-status {
+    display: inline-block;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid #a8d2c5;
+    border-radius: 999px;
+    background: #edf8f4;
+    color: var(--brand-dark);
+    font-family: Arial, sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.order-empty-state {
+    display: grid;
+    gap: 0.75rem;
+    justify-items: center;
+    max-width: 860px;
+}
+
+.order-empty-state h2,
+.order-empty-state p {
+    margin-bottom: 0;
+}
+
+.order-detail-header {
+    margin-bottom: 2rem;
+}
+
+.order-detail-header h1 {
+    max-width: none;
+    margin-bottom: 0;
+    font-size: clamp(2.5rem, 6vw, 4.8rem);
+}
+
+.order-detail-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+}
+
+.order-panel h2 {
+    margin-bottom: 1.25rem;
+    font-size: 1.35rem;
+}
+
+.order-info-list {
+    display: grid;
+    gap: 0.8rem;
+    margin: 0;
+}
+
+.order-info-list div {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.7fr) minmax(0, 1.3fr);
+    gap: 1rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.order-info-list dt,
+.order-info-list dd {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    font-size: 0.88rem;
+}
+
+.order-info-list dt {
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.order-items-panel {
+    grid-column: 1 / -1;
+}
+
+.order-items {
+    display: grid;
+    gap: 1rem;
+}
+
+.order-item {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.order-item__image {
+    display: grid;
+    aspect-ratio: 1;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: #edf6f4;
+    color: var(--muted);
+    font-family: Arial, sans-serif;
+    font-size: 0.72rem;
+    text-align: center;
+}
+
+.order-item__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.order-item__details h3 {
+    margin-bottom: 0.35rem;
+    font-size: 1.2rem;
+}
+
+.order-item__details p {
+    margin-bottom: 0.2rem;
+}
+
+.order-total-row {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 2px solid var(--ink);
+    font-size: 1.1rem;
+}
+
+.order-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+}
+
 .product-detail-page {
     padding: 3rem 0 6rem;
 }
@@ -879,6 +1072,10 @@ h1 {
         padding: 4rem 0;
     }
 
+    .orders-page {
+        padding: 4rem 0;
+    }
+
     .product-detail-page {
         padding: 2rem 0 4rem;
     }
@@ -939,5 +1136,27 @@ h1 {
 
     .cart-item__image {
         min-height: 220px;
+    }
+
+    .order-detail-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .order-items-panel {
+        grid-column: auto;
+    }
+
+    .order-detail-header,
+    .order-card__header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .order-item {
+        grid-template-columns: 80px minmax(0, 1fr);
+    }
+
+    .order-item__subtotal {
+        grid-column: 2;
     }
 }

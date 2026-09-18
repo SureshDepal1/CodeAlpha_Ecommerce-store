@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Order #{{ order.pk }} | Simple E-commerce Store{% endblock %}
+
+{% block content %}
+<main class="orders-page">
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="{% url 'store:order_history' %}">My Orders</a>
+            <span>/</span>
+            <span>Order #{{ order.pk }}</span>
+        </div>
+
+        <header class="order-detail-header">
+            <div>
+                <p class="eyebrow">Order details</p>
+                <h1>Order #{{ order.pk }}</h1>
+            </div>
+            <span class="order-status">{{ order.get_status_display }}</span>
+        </header>
+
+        <div class="order-detail-layout">
+            <section class="order-panel">
+                <h2>Order Information</h2>
+                <dl class="order-info-list">
+                    <div><dt>Order date</dt><dd>{{ order.created_at|date:"F j, Y, g:i a" }}</dd></div>
+                    <div><dt>Last updated</dt><dd>{{ order.updated_at|date:"F j, Y, g:i a" }}</dd></div>
+                    <div><dt>Status</dt><dd>{{ order.get_status_display }}</dd></div>
+                </dl>
+            </section>
+
+            <section class="order-panel">
+                <h2>Customer / Shipping Information</h2>
+                <dl class="order-info-list">
+                    <div><dt>Full name</dt><dd>{{ order.full_name }}</dd></div>
+                    <div><dt>Email</dt><dd>{{ order.email }}</dd></div>
+                    <div><dt>Phone</dt><dd>{{ order.phone }}</dd></div>
+                    <div><dt>Address</dt><dd>{{ order.address }}</dd></div>
+                    <div><dt>City</dt><dd>{{ order.city }}</dd></div>
+                    <div><dt>State</dt><dd>{{ order.state|default:"Not provided" }}</dd></div>
+                    <div><dt>Postal code</dt><dd>{{ order.postal_code }}</dd></div>
+                    <div><dt>Country</dt><dd>{{ order.country }}</dd></div>
+                </dl>
+            </section>
+
+            <section class="order-panel order-items-panel">
+                <h2>Order Items</h2>
+                <div class="order-items">
+                    {% for item in order.items.all %}
+                        <article class="order-item">
+                            <div class="order-item__image">
+                                {% if item.product and item.product.image %}
+                                    <img src="{{ item.product.image.url }}" alt="{{ item.product_name }}">
+                                {% else %}
+                                    <span>Product image unavailable</span>
+                                {% endif %}
+                            </div>
+                            <div class="order-item__details">
+                                <h3>{{ item.product_name }}</h3>
+                                <p>Price at purchase: ${{ item.price|floatformat:2 }}</p>
+                                <p>Quantity: {{ item.quantity }}</p>
+                            </div>
+                            <strong class="order-item__subtotal">${{ item.subtotal|floatformat:2 }}</strong>
+                        </article>
+                    {% endfor %}
+                </div>
+                <div class="order-total-row">
+                    <span>Total amount</span>
+                    <strong>${{ order.total_amount|floatformat:2 }}</strong>
+                </div>
+            </section>
+        </div>
+
+        <div class="order-actions">
+            <a class="button button--secondary" href="{% url 'store:order_history' %}">Back to My Orders</a>
+            <a class="button" href="{% url 'store:product_list' %}">Continue Shopping</a>
+        </div>
+    </div>
+</main>
+{% endblock %}

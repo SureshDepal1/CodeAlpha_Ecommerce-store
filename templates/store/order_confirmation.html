@@ -13,7 +13,11 @@
             <p><strong>Customer:</strong> {{ order.full_name }}</p>
             <p><strong>Email:</strong> {{ order.email }}</p>
             <p><strong>Shipping address:</strong><br>{{ order.address }}, {{ order.city }}, {{ order.state }} {{ order.postal_code }}, {{ order.country }}</p>
-            <a class="button" href="{% url 'store:product_list' %}">Continue Shopping</a>
+            <div class="order-actions">
+                <a class="button" href="{% url 'store:order_detail' order.pk %}">View Order Details</a>
+                <a class="button button--secondary" href="{% url 'store:order_history' %}">View My Orders</a>
+                <a class="button button--secondary" href="{% url 'store:product_list' %}">Continue Shopping</a>
+            </div>
         </section>
 
         <aside class="checkout-summary">

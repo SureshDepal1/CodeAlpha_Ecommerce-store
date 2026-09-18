@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}My Orders | Simple E-commerce Store{% endblock %}
+
+{% block content %}
+<main class="orders-page">
+    <div class="container">
+        <header class="page-heading">
+            <p class="eyebrow">Account</p>
+            <h1>My Orders</h1>
+            <p>Review your previous purchases and order status.</p>
+        </header>
+
+        {% if orders %}
+            <div class="order-list">
+                {% for order in orders %}
+                    <article class="order-card">
+                        <div class="order-card__header">
+                            <div>
+                                <p class="order-card__number">Order #{{ order.pk }}</p>
+                                <p class="order-card__date">{{ order.created_at|date:"F j, Y, g:i a" }}</p>
+                            </div>
+                            <span class="order-status">{{ order.get_status_display }}</span>
+                        </div>
+                        <div class="order-card__summary">
+                            <span>{{ order.item_count }} item{{ order.item_count|pluralize }}</span>
+                            <strong>${{ order.total_amount|floatformat:2 }}</strong>
+                        </div>
+                        <a class="button button--secondary" href="{% url 'store:order_detail' order.pk %}">View Details</a>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <section class="empty-state order-empty-state">
+                <h2>You have not placed any orders yet.</h2>
+                <p>Browse the store to find something you will love.</p>
+                <a class="button" href="{% url 'store:product_list' %}">Start Shopping</a>
+            </section>
+        {% endif %}
+    </div>
+</main>
+{% endblock %}

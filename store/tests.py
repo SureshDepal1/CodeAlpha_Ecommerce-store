@@ -1354,3 +1354,175 @@ class OrderProcessingTests(TestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock, 5)
         self.assertEqual(self.client.session["cart"], {str(self.product.pk): 1})
+
+
+class OrderHistoryTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="historyuser",
+            password="StrongPassword123!",
+            email="history@example.com",
+        )
+        self.other_user = User.objects.create_user(
+            username="otherhistoryuser",
+            password="StrongPassword123!",
+        )
+        self.product = Product.objects.create(
+            name="Historical Product",
+            description="A product for history tests.",
+            price="75.00",
+            category="General",
+            stock=5,
+            is_available=True,
+        )
+        self.history_url = reverse("store:order_history")
+
+    def create_order(self, user=None, total="150.00", name="History Customer"):
+        return Order.objects.create(
+            user=user or self.user,
+            full_name=name,
+            email="customer@example.com",
+            phone="03001234567",
+            address="123 History Street",
+            city="Karachi",
+            state="Sindh",
+            postal_code="74000",
+            country="Pakistan",
+            total_amount=total,
+        )
+
+    def create_order_item(self, order, product=None):
+        return OrderItem.objects.create(
+            order=order,
+            product=product or self.product,
+            product_name="Historical Product",
+            price="75.00",
+            quantity=2,
+            subtotal="150.00",
+        )
+
+    def test_anonymous_users_are_redirected_from_history_and_detail(self):
+        order = self.create_order()
+
+        self.assertRedirects(
+            self.client.get(self.history_url),
+            f"{reverse('store:login')}?next={self.history_url}",
+        )
+        detail_url = reverse("store:order_detail", args=[order.pk])
+        self.assertRedirects(
+            self.client.get(detail_url),
+            f"{reverse('store:login')}?next={detail_url}",
+        )
+
+    def test_history_uses_correct_template_and_only_shows_current_users_orders(self):
+        own_order = self.create_order()
+        other_order = self.create_order(user=self.other_user, name="Private Customer")
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.history_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "store/order_history.html")
+        self.assertContains(response, f"Order #{own_order.pk}")
+        self.assertNotContains(response, f"Order #{other_order.pk}")
+        self.assertNotContains(response, "Private Customer")
+
+    def test_history_orders_are_newest_first(self):
+        older = self.create_order(total="10.00")
+        newer = self.create_order(total="20.00")
+        Order.objects.filter(pk=older.pk).update(created_at="2026-09-17T12:00:00Z")
+        Order.objects.filter(pk=newer.pk).update(created_at="2026-09-18T12:00:00Z")
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.history_url)
+
+        content = response.content.decode()
+        self.assertLess(content.index(f"Order #{newer.pk}"), content.index(f"Order #{older.pk}"))
+
+    def test_empty_history_shows_start_shopping_link(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.history_url)
+
+        self.assertContains(response, "You have not placed any orders yet.")
+        self.assertContains(response, f'href="{reverse("store:product_list")}"')
+        self.assertContains(response, "Start Shopping")
+
+    def test_user_can_view_own_order_details(self):
+        order = self.create_order()
+        self.create_order_item(order)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("store:order_detail", args=[order.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "store/order_detail.html")
+        self.assertContains(response, "Order Information")
+        self.assertContains(response, "History Customer")
+        self.assertContains(response, "customer@example.com")
+        self.assertContains(response, "123 History Street")
+        self.assertContains(response, "Pending")
+        self.assertContains(response, "Historical Product")
+        self.assertContains(response, "75.00")
+        self.assertContains(response, "150.00")
+        self.assertContains(response, "2")
+
+    def test_user_cannot_view_another_users_order_details(self):
+        order = self.create_order(user=self.other_user, name="Private Customer")
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("store:order_detail", args=[order.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_order_detail_uses_historical_name_and_price_after_product_changes(self):
+        order = self.create_order()
+        self.create_order_item(order)
+        self.product.name = "Current Product Name"
+        self.product.price = "999.99"
+        self.product.save()
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("store:order_detail", args=[order.pk]))
+
+        self.assertContains(response, "Historical Product")
+        self.assertContains(response, "75.00")
+        self.assertNotContains(response, "Current Product Name")
+        self.assertNotContains(response, "999.99")
+
+    def test_order_detail_survives_deleted_product(self):
+        order = self.create_order()
+        self.create_order_item(order)
+        self.product.delete()
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("store:order_detail", args=[order.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Historical Product")
+        self.assertContains(response, "Product image unavailable")
+        self.assertContains(response, "75.00")
+        self.assertContains(response, "150.00")
+
+    def test_authenticated_navigation_shows_my_orders(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("store:home"))
+
+        self.assertContains(response, f'href="{self.history_url}"')
+        self.assertContains(response, "My Orders")
+
+    def test_anonymous_navigation_hides_my_orders(self):
+        response = self.client.get(reverse("store:home"))
+
+        self.assertNotContains(response, "My Orders")
+
+    def test_confirmation_links_to_history_and_detail(self):
+        order = self.create_order()
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("store:order_confirmation", args=[order.pk]))
+
+        self.assertContains(response, reverse("store:order_history"))
+        self.assertContains(response, reverse("store:order_detail", args=[order.pk]))
+

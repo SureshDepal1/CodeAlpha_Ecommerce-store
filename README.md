@@ -130,3 +130,7 @@ Step 8 - Cart management completed. Product database, Django Admin, product list
 ## Step 10 - Order Processing
 
 Checkout now creates atomic `Order` and `OrderItem` records from the authenticated user's session cart. Prices and product names are saved as historical snapshots, stock is locked and reduced safely, and the cart is cleared only after a successful order. Customers are redirected to an owner-protected order confirmation page, and administrators can manage orders and their items through Django Admin. Automated tests cover validation, totals, stock, snapshots, security, transactions, and checkout regressions.
+
+## Step 11 - User Order History
+
+Authenticated customers can view their own orders at `/orders/`, open complete order details, and return to shopping. History and detail views enforce server-side order ownership, display stored historical item snapshots, and handle deleted products without breaking old orders. Responsive templates and automated history, security, navigation, and historical-data tests are included.
