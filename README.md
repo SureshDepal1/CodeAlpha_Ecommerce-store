@@ -134,3 +134,7 @@ Checkout now creates atomic `Order` and `OrderItem` records from the authenticat
 ## Step 11 - User Order History
 
 Authenticated customers can view their own orders at `/orders/`, open complete order details, and return to shopping. History and detail views enforce server-side order ownership, display stored historical item snapshots, and handle deleted products without breaking old orders. Responsive templates and automated history, security, navigation, and historical-data tests are included.
+
+## Step 12 - Product Search and Filtering
+
+The products page now supports GET-based search across product names, descriptions, and categories, dynamic category filtering, availability filtering, Decimal-safe price ranges, and fixed-option sorting. Filters can be combined, preserve their values in the responsive filter UI, show result counts, and provide clear empty states and a Clear Filters link. Automated tests cover search, categories, prices, availability, sorting, combined filters, and existing feature regressions.

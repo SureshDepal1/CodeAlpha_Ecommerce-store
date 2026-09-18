@@ -10,7 +10,68 @@
         <p>Explore our available products and find something useful for your day.</p>
     </section>
 
+    <section class="product-filters container" aria-labelledby="product-filters-title">
+        <div class="product-filters__heading">
+            <h2 id="product-filters-title">Search Products</h2>
+            <p>Find products by name, description, category, price, or stock status.</p>
+        </div>
+        <form method="get" class="product-filter-form">
+            <div class="filter-field filter-field--search">
+                <label for="product-search">Search</label>
+                <input id="product-search" type="search" name="q" value="{{ filters.q }}" placeholder="Search products...">
+            </div>
+            <div class="filter-field">
+                <label for="product-category">Category</label>
+                <select id="product-category" name="category">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                        <option value="{{ category }}" {% if filters.category|lower == category|lower %}selected{% endif %}>{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="minimum-price">Min Price</label>
+                <input id="minimum-price" type="text" name="min_price" value="{{ filters.min_price }}" inputmode="decimal" placeholder="Any">
+            </div>
+            <div class="filter-field">
+                <label for="maximum-price">Max Price</label>
+                <input id="maximum-price" type="text" name="max_price" value="{{ filters.max_price }}" inputmode="decimal" placeholder="Any">
+            </div>
+            <div class="filter-field">
+                <label for="availability">Availability</label>
+                <select id="availability" name="availability">
+                    <option value="all" {% if filters.availability == "all" %}selected{% endif %}>All Products</option>
+                    <option value="in_stock" {% if filters.availability == "in_stock" %}selected{% endif %}>In Stock</option>
+                    <option value="out_of_stock" {% if filters.availability == "out_of_stock" %}selected{% endif %}>Out of Stock</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="sort-products">Sort By</label>
+                <select id="sort-products" name="sort">
+                    <option value="newest" {% if filters.sort == "newest" %}selected{% endif %}>Newest</option>
+                    <option value="price_low" {% if filters.sort == "price_low" %}selected{% endif %}>Price: Low to High</option>
+                    <option value="price_high" {% if filters.sort == "price_high" %}selected{% endif %}>Price: High to Low</option>
+                    <option value="name_az" {% if filters.sort == "name_az" %}selected{% endif %}>Name: A-Z</option>
+                    <option value="name_za" {% if filters.sort == "name_za" %}selected{% endif %}>Name: Z-A</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="button">Apply Filters</button>
+                <a class="button button--secondary" href="{% url 'store:product_list' %}">Clear Filters</a>
+            </div>
+        </form>
+    </section>
+
     <section class="product-listing container" aria-label="Available products">
+        <div class="product-results-heading">
+            <p>
+                {% if result_count == 1 %}
+                    1 product found
+                {% else %}
+                    {{ result_count }} products found
+                {% endif %}
+            </p>
+        </div>
         <div class="product-grid">
             {% for product in products %}
                 <article class="product-card">
@@ -39,7 +100,14 @@
                     </div>
                 </article>
             {% empty %}
-                <p class="empty-state">No products are available at the moment.</p>
+                <div class="empty-state product-empty-state">
+                    {% if filters.q or filters.category or filters.min_price or filters.max_price or filters.availability != "all" %}
+                        <p>No products found matching your filters.</p>
+                    {% else %}
+                        <p>No products are available at the moment.</p>
+                    {% endif %}
+                    <a class="button button--secondary" href="{% url 'store:product_list' %}">Clear Filters</a>
+                </div>
             {% endfor %}
         </div>
     </section>

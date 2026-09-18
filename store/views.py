@@ -1,10 +1,11 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
-from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import DatabaseError, transaction
 from django.db.models import Count
+from django.db.models import Q
+from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -174,8 +175,88 @@ def home(request):
 
 
 def product_list(request):
-    products = Product.objects.filter(is_available=True).order_by("-created_at")
-    return render(request, "store/product_list.html", {"products": products})
+    query = request.GET.get("q", "").strip()
+    selected_category = request.GET.get("category", "").strip()
+    availability = request.GET.get("availability", "all").strip()
+    selected_sort = request.GET.get("sort", "newest").strip()
+    min_price_input = request.GET.get("min_price", "").strip()
+    max_price_input = request.GET.get("max_price", "").strip()
+
+    products = Product.objects.filter(is_available=True)
+    if query:
+        products = products.filter(
+            Q(name__icontains=query)
+            | Q(description__icontains=query)
+            | Q(category__icontains=query)
+        )
+    if selected_category:
+        products = products.filter(category__iexact=selected_category)
+
+    if availability == "in_stock":
+        products = products.filter(stock__gt=0)
+    elif availability == "out_of_stock":
+        products = products.filter(stock=0)
+    else:
+        availability = "all"
+
+    min_price = _parse_filter_price(min_price_input, "minimum", request)
+    max_price = _parse_filter_price(max_price_input, "maximum", request)
+    if min_price is not None:
+        products = products.filter(price__gte=min_price)
+    if max_price is not None:
+        products = products.filter(price__lte=max_price)
+    if min_price is not None and max_price is not None and min_price > max_price:
+        messages.error(request, "Minimum price cannot be greater than maximum price.")
+        products = products.none()
+
+    sort_options = {
+        "newest": "-created_at",
+        "price_low": "price",
+        "price_high": "-price",
+        "name_az": "name",
+        "name_za": "-name",
+    }
+    if selected_sort not in sort_options:
+        selected_sort = "newest"
+    products = products.order_by(sort_options[selected_sort])
+
+    category_labels = {}
+    for category in Product.objects.filter(is_available=True).values_list("category", flat=True):
+        if category and category.strip():
+            category_label = category.strip()
+            category_labels.setdefault(category_label.casefold(), category_label)
+    categories = sorted(category_labels.values(), key=str.casefold)
+    return render(
+        request,
+        "store/product_list.html",
+        {
+            "products": products,
+            "result_count": products.count(),
+            "categories": categories,
+            "filters": {
+                "q": query,
+                "category": selected_category,
+                "availability": availability,
+                "min_price": min_price_input,
+                "max_price": max_price_input,
+                "sort": selected_sort,
+            },
+        },
+    )
+
+
+def _parse_filter_price(value, label, request):
+    if not value:
+        return None
+    try:
+        parsed_value = Decimal(value)
+    except (TypeError, ValueError, InvalidOperation):
+        messages.error(request, f"Please enter a valid {label} price.")
+        return None
+    if not parsed_value.is_finite() or parsed_value < 0:
+        messages.error(request, f"Please enter a valid {label} price.")
+        return None
+    return parsed_value
 
 
 def product_detail(request, pk):

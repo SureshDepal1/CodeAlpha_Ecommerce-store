@@ -88,6 +88,176 @@ class ProductListingTests(TestCase):
             f'href="{reverse("store:product_detail", args=[product.pk])}"',
         )
 
+    def create_filter_product(self, name, description, category, price, stock=5, is_available=True):
+        return Product.objects.create(
+            name=name,
+            description=description,
+            category=category,
+            price=price,
+            stock=stock,
+            is_available=is_available,
+        )
+
+    def test_search_matches_name_case_insensitively(self):
+        self.create_filter_product("Laptop Pro", "Fast computer", "Electronics", "1200.00")
+        self.create_filter_product("Desk", "Office furniture", "Home", "500.00")
+
+        response = self.client.get(reverse("store:product_list"), {"q": "LAPTOP"})
+
+        self.assertContains(response, "Laptop Pro")
+        self.assertNotContains(response, "Desk")
+
+    def test_search_matches_description_and_category(self):
+        self.create_filter_product("Travel Kit", "Lightweight camping gear", "Outdoor", "80.00")
+        self.create_filter_product("Office Chair", "Comfortable seat", "Furniture", "150.00")
+
+        description_response = self.client.get(reverse("store:product_list"), {"q": "camping"})
+        category_response = self.client.get(reverse("store:product_list"), {"q": "outdoor"})
+
+        self.assertContains(description_response, "Travel Kit")
+        self.assertContains(category_response, "Travel Kit")
+        self.assertNotContains(description_response, "Office Chair")
+
+    def test_search_does_not_show_unavailable_products(self):
+        self.create_filter_product("Hidden Laptop", "A laptop", "Electronics", "1200.00", is_available=False)
+
+        response = self.client.get(reverse("store:product_list"), {"q": "laptop"})
+
+        self.assertNotContains(response, "Hidden Laptop")
+
+    def test_category_filter_is_case_insensitive_and_categories_are_unique(self):
+        self.create_filter_product("Phone", "Smart phone", "Electronics", "700.00")
+        self.create_filter_product("Cable", "Phone cable", "electronics", "20.00")
+        self.create_filter_product("Table", "Wood table", "Home", "300.00")
+
+        response = self.client.get(reverse("store:product_list"), {"category": "ELECTRONICS"})
+
+        self.assertContains(response, "Phone")
+        self.assertContains(response, "Cable")
+        self.assertNotContains(response, "Table")
+        self.assertEqual(response.context["categories"], ["Electronics", "Home"])
+
+    def test_invalid_category_is_safe_and_returns_no_products(self):
+        self.create_filter_product("Phone", "Smart phone", "Electronics", "700.00")
+
+        response = self.client.get(reverse("store:product_list"), {"category": "Unknown"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No products found matching your filters.")
+        self.assertEqual(response.context["result_count"], 0)
+
+    def test_price_filters_support_minimum_maximum_and_decimals(self):
+        self.create_filter_product("Budget", "Budget item", "General", "10.25")
+        self.create_filter_product("Midrange", "Midrange item", "General", "50.50")
+        self.create_filter_product("Premium", "Premium item", "General", "100.75")
+
+        response = self.client.get(
+            reverse("store:product_list"),
+            {"min_price": "10.25", "max_price": "50.50"},
+        )
+
+        self.assertContains(response, "Budget")
+        self.assertContains(response, "Midrange")
+        self.assertNotContains(response, "Premium")
+
+    def test_invalid_and_negative_price_values_do_not_crash(self):
+        self.create_filter_product("Valid Product", "Valid", "General", "25.00")
+
+        response = self.client.get(
+            reverse("store:product_list"),
+            {"min_price": "abc", "max_price": "NaN"},
+        )
+        negative_response = self.client.get(
+            reverse("store:product_list"),
+            {"min_price": "-10"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(negative_response.status_code, 200)
+        self.assertContains(response, "Please enter a valid minimum price.")
+        self.assertContains(response, "Please enter a valid maximum price.")
+        self.assertContains(negative_response, "Please enter a valid minimum price.")
+
+    def test_minimum_price_greater_than_maximum_returns_empty_state(self):
+        self.create_filter_product("Product", "Product", "General", "25.00")
+
+        response = self.client.get(
+            reverse("store:product_list"),
+            {"min_price": "100", "max_price": "10"},
+        )
+
+        self.assertEqual(response.context["result_count"], 0)
+        self.assertContains(response, "Minimum price cannot be greater than maximum price.")
+        self.assertContains(response, "No products found matching your filters.")
+
+    def test_availability_filter_only_uses_available_products(self):
+        self.create_filter_product("Available Stock", "In stock", "General", "20.00", stock=2)
+        self.create_filter_product("Available Sold Out", "Out of stock", "General", "30.00", stock=0)
+        self.create_filter_product("Unavailable Stock", "Hidden", "General", "40.00", stock=2, is_available=False)
+
+        in_stock = self.client.get(reverse("store:product_list"), {"availability": "in_stock"})
+        out_of_stock = self.client.get(reverse("store:product_list"), {"availability": "out_of_stock"})
+
+        self.assertContains(in_stock, "Available Stock")
+        self.assertNotContains(in_stock, "Available Sold Out")
+        self.assertContains(out_of_stock, "Available Sold Out")
+        self.assertNotContains(out_of_stock, "Unavailable Stock")
+
+    def test_sorting_options_and_invalid_sort_are_safe(self):
+        first = self.create_filter_product("Zeta", "Z", "General", "30.00")
+        second = self.create_filter_product("Alpha", "A", "General", "10.00")
+        third = self.create_filter_product("Middle", "M", "General", "20.00")
+        Product.objects.filter(pk=first.pk).update(created_at="2026-09-17T12:00:00Z")
+        Product.objects.filter(pk=second.pk).update(created_at="2026-09-18T12:00:00Z")
+        Product.objects.filter(pk=third.pk).update(created_at="2026-09-16T12:00:00Z")
+
+        low_response = self.client.get(reverse("store:product_list"), {"sort": "price_low"})
+        high_response = self.client.get(reverse("store:product_list"), {"sort": "price_high"})
+        name_response = self.client.get(reverse("store:product_list"), {"sort": "name_az"})
+        invalid_response = self.client.get(reverse("store:product_list"), {"sort": "created_at"})
+
+        self.assertEqual(list(low_response.context["products"]), [second, third, first])
+        self.assertEqual(list(high_response.context["products"]), [first, third, second])
+        self.assertEqual(list(name_response.context["products"]), [second, third, first])
+        self.assertEqual(invalid_response.context["filters"]["sort"], "newest")
+        self.assertEqual(list(invalid_response.context["products"]), [second, first, third])
+
+    def test_combined_filters_and_sorting_work_together(self):
+        self.create_filter_product("Phone Mini", "Compact phone", "Electronics", "300.00")
+        self.create_filter_product("Phone Max", "Large phone", "Electronics", "900.00")
+        self.create_filter_product("Phone Case", "Protective case", "Accessories", "30.00")
+
+        response = self.client.get(
+            reverse("store:product_list"),
+            {
+                "q": "phone",
+                "category": "electronics",
+                "min_price": "200",
+                "max_price": "500",
+                "sort": "price_high",
+            },
+        )
+
+        self.assertContains(response, "Phone Mini")
+        self.assertNotContains(response, "Phone Max")
+        self.assertNotContains(response, "Phone Case")
+        self.assertEqual(response.context["result_count"], 1)
+
+    def test_filter_controls_results_count_and_clear_link_are_present(self):
+        self.create_filter_product("Visible Product", "Description", "General", "25.00")
+
+        response = self.client.get(reverse("store:product_list"), {"q": "Visible"})
+
+        self.assertContains(response, 'name="q"')
+        self.assertContains(response, 'name="category"')
+        self.assertContains(response, 'name="min_price"')
+        self.assertContains(response, 'name="max_price"')
+        self.assertContains(response, 'name="availability"')
+        self.assertContains(response, 'name="sort"')
+        self.assertContains(response, "1 product found")
+        self.assertContains(response, f'href="{reverse("store:product_list")}"')
+        self.assertContains(response, "Visible Product")
+
 
 class ProductDetailTests(TestCase):
     def create_product(self, **overrides):
