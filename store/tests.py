@@ -1,9 +1,13 @@
+from decimal import Decimal
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
+from django.db import DatabaseError
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Product
+from .models import Order, OrderItem, Product
 
 
 User = get_user_model()
@@ -1174,3 +1178,179 @@ class CheckoutTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.client.session["cart"][str(self.product_a.pk)], 2)
         self.assertEqual(self.product_a.stock, original_stock)
+
+
+class OrderProcessingTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="orderuser",
+            password="StrongPassword123!",
+            email="orderuser@example.com",
+        )
+        self.other_user = User.objects.create_user(username="otheruser", password="StrongPassword123!")
+        self.product = Product.objects.create(
+            name="Order Product",
+            description="A product for order tests.",
+            price="125.50",
+            category="General",
+            stock=5,
+            is_available=True,
+        )
+        self.second_product = Product.objects.create(
+            name="Second Order Product",
+            description="Another product for order tests.",
+            price="10.25",
+            category="General",
+            stock=4,
+            is_available=True,
+        )
+        self.checkout_url = reverse("store:checkout")
+        self.checkout_data = {
+            "full_name": "Order Customer",
+            "email": "customer@example.com",
+            "phone": "03001234567",
+            "address": "123 Test Street",
+            "city": "Karachi",
+            "state": "Sindh",
+            "postal_code": "74000",
+            "country": "Pakistan",
+            "review_only": "1",
+        }
+
+    def set_cart(self, cart):
+        session = self.client.session
+        session["cart"] = cart
+        session.save()
+
+    def place_order(self, cart=None):
+        self.client.force_login(self.user)
+        self.set_cart(cart or {str(self.product.pk): 2})
+        return self.client.post(self.checkout_url, self.checkout_data)
+
+    def test_order_and_order_item_store_correct_values(self):
+        response = self.place_order({str(self.product.pk): 2, str(self.second_product.pk): 1})
+
+        order = Order.objects.get()
+        item = order.items.get(product=self.product)
+        self.assertRedirects(response, reverse("store:order_confirmation", args=[order.pk]))
+        self.assertEqual(order.user, self.user)
+        self.assertEqual(order.status, Order.Status.PENDING)
+        self.assertEqual(order.total_amount, Decimal("261.25"))
+        self.assertIsNotNone(order.created_at)
+        self.assertIsNotNone(order.updated_at)
+        self.assertEqual(item.product_name, "Order Product")
+        self.assertEqual(item.price, Decimal("125.50"))
+        self.assertEqual(item.quantity, 2)
+        self.assertEqual(item.subtotal, Decimal("251.00"))
+
+    def test_order_stock_is_reduced_and_cart_is_cleared(self):
+        self.place_order()
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 3)
+        self.assertEqual(self.client.session.get("cart"), {})
+
+    def test_buying_all_stock_marks_product_unavailable(self):
+        self.place_order({str(self.product.pk): 5})
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 0)
+        self.assertFalse(self.product.is_available)
+
+    def test_historical_product_name_and_price_are_preserved(self):
+        self.place_order()
+        item = OrderItem.objects.get()
+        self.product.name = "Renamed Product"
+        self.product.price = Decimal("999.99")
+        self.product.save()
+
+        item.refresh_from_db()
+        self.assertEqual(item.product_name, "Order Product")
+        self.assertEqual(item.price, Decimal("125.50"))
+
+    def test_unavailable_or_insufficient_stock_keeps_cart_and_creates_no_order(self):
+        self.product.stock = 1
+        self.product.save()
+        response = self.place_order({str(self.product.pk): 2})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Order.objects.count(), 0)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 1)
+        self.assertEqual(self.client.session["cart"], {str(self.product.pk): 2})
+        self.assertEqual(response.url, reverse("store:cart"))
+
+    def test_deleted_product_keeps_cart_and_creates_no_order(self):
+        self.client.force_login(self.user)
+        product_id = self.product.pk
+        self.set_cart({str(product_id): 1})
+        self.product.delete()
+
+        response = self.client.post(self.checkout_url, self.checkout_data)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Order.objects.count(), 0)
+        self.assertEqual(self.client.session["cart"], {str(product_id): 1})
+        self.assertEqual(response.url, reverse("store:cart"))
+
+    def test_empty_cart_cannot_create_order(self):
+        self.client.force_login(self.user)
+        response = self.client.post(self.checkout_url, self.checkout_data)
+
+        self.assertRedirects(response, reverse("store:cart"))
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_invalid_checkout_data_cannot_create_order(self):
+        self.client.force_login(self.user)
+        self.set_cart({str(self.product.pk): 1})
+        invalid_data = self.checkout_data | {"email": "invalid"}
+
+        response = self.client.post(self.checkout_url, invalid_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Order.objects.count(), 0)
+        self.assertEqual(self.client.session["cart"], {str(self.product.pk): 1})
+
+    def test_confirmation_requires_login_and_is_owner_only(self):
+        response = self.place_order()
+        order = Order.objects.get()
+        self.client.logout()
+        self.assertEqual(
+            self.client.get(reverse("store:order_confirmation", args=[order.pk])).status_code,
+            302,
+        )
+        self.client.force_login(self.other_user)
+        self.assertEqual(
+            self.client.get(reverse("store:order_confirmation", args=[order.pk])).status_code,
+            404,
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_confirmation_refresh_does_not_create_duplicate_order(self):
+        response = self.place_order()
+        confirmation = self.client.get(response.url)
+
+        self.assertEqual(confirmation.status_code, 200)
+        self.client.get(response.url)
+        self.assertEqual(Order.objects.count(), 1)
+
+    def test_final_order_creation_requires_post(self):
+        self.client.force_login(self.user)
+        self.set_cart({str(self.product.pk): 1})
+
+        response = self.client.get(self.checkout_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_transaction_rolls_back_order_and_stock_on_item_failure(self):
+        self.client.force_login(self.user)
+        self.set_cart({str(self.product.pk): 1})
+        with patch("store.views.OrderItem.objects.create", side_effect=DatabaseError):
+            response = self.client.post(self.checkout_url, self.checkout_data)
+
+        self.assertRedirects(response, reverse("store:checkout"))
+        self.assertEqual(Order.objects.count(), 0)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 5)
+        self.assertEqual(self.client.session["cart"], {str(self.product.pk): 1})

@@ -84,7 +84,12 @@
                     </div>
                 </div>
 
-                <button type="submit" class="button">Continue to Review</button>
+                {% if review_only %}
+                    <input type="hidden" name="review_only" value="1">
+                    <button type="submit" class="button">Place Order</button>
+                {% else %}
+                    <button type="submit" class="button">Continue to Review</button>
+                {% endif %}
             </form>
         </section>
 

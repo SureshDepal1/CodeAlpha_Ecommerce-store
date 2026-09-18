@@ -3,11 +3,80 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.db import DatabaseError, transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .forms import CheckoutForm, LoginForm, RegistrationForm
-from .models import Product
+from .models import Order, OrderItem, Product
+
+
+def _create_order_from_cart(user, form, session):
+    cart = session.get("cart", {})
+    if not cart:
+        raise ValueError("Your cart is empty.")
+
+    product_ids = []
+    quantities = {}
+    for raw_product_id, raw_quantity in cart.items():
+        try:
+            product_id = int(raw_product_id)
+            quantity = int(raw_quantity)
+        except (TypeError, ValueError):
+            raise ValueError("Your cart contains invalid items.")
+        if quantity <= 0:
+            raise ValueError("Cart quantities must be greater than zero.")
+        product_ids.append(product_id)
+        quantities[product_id] = quantity
+
+    with transaction.atomic():
+        products = Product.objects.select_for_update().filter(pk__in=product_ids)
+        products_by_id = {product.pk: product for product in products}
+        if len(products_by_id) != len(product_ids):
+            raise ValueError("One or more products in your cart no longer exist.")
+
+        items = []
+        total = Decimal("0.00")
+        for product_id in product_ids:
+            product = products_by_id[product_id]
+            quantity = quantities[product_id]
+            if not product.is_available or product.stock <= 0:
+                raise ValueError(f"{product.name} is no longer available.")
+            if quantity > product.stock:
+                raise ValueError(f"Only {product.stock} of {product.name} are available.")
+            subtotal = product.price * quantity
+            total += subtotal
+            items.append((product, quantity, subtotal))
+
+        order = Order.objects.create(
+            user=user,
+            full_name=form.cleaned_data["full_name"],
+            email=form.cleaned_data["email"],
+            phone=form.cleaned_data["phone"],
+            address=form.cleaned_data["address"],
+            city=form.cleaned_data["city"],
+            state=form.cleaned_data["state"],
+            postal_code=form.cleaned_data["postal_code"],
+            country=form.cleaned_data["country"],
+            total_amount=total,
+        )
+        for product, quantity, subtotal in items:
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                product_name=product.name,
+                price=product.price,
+                quantity=quantity,
+                subtotal=subtotal,
+            )
+            product.stock -= quantity
+            if product.stock == 0:
+                product.is_available = False
+            product.save(update_fields=("stock", "is_available", "updated_at"))
+
+    session["cart"] = {}
+    session.modified = True
+    return order
 
 
 def _get_checkout_cart_summary(request):
@@ -359,18 +428,33 @@ def logout_view(request):
 
 @login_required(login_url="store:login")
 def checkout(request):
-    cart_summary = _get_checkout_cart_summary(request)
-    if cart_summary is None:
-        messages.info(request, "Your cart is empty.")
-        return redirect("store:cart")
-
-    if cart_summary["invalid"]:
-        messages.error(request, "One or more items in your cart are no longer available in the requested quantity.")
-        return redirect("store:cart")
-
     if request.method == "POST":
         form = CheckoutForm(request.POST)
         if form.is_valid():
+            if request.POST.get("review_only") == "1":
+                original_cart = request.session.get("cart", {}).copy()
+                try:
+                    order = _create_order_from_cart(request.user, form, request.session)
+                except ValueError as error:
+                    request.session["cart"] = original_cart
+                    request.session.modified = True
+                    messages.error(request, str(error))
+                    return redirect("store:cart")
+                except DatabaseError:
+                    request.session["cart"] = original_cart
+                    request.session.modified = True
+                    messages.error(request, "We could not place your order. Please try again.")
+                    return redirect("store:checkout")
+                messages.success(request, "Your order has been placed successfully.")
+                return redirect("store:order_confirmation", pk=order.pk)
+
+            cart_summary = _get_checkout_cart_summary(request)
+            if cart_summary is None:
+                messages.info(request, "Your cart is empty.")
+                return redirect("store:cart")
+            if cart_summary["invalid"]:
+                messages.error(request, "One or more items in your cart are no longer available in the requested quantity.")
+                return redirect("store:cart")
             return render(
                 request,
                 "store/checkout.html",
@@ -382,6 +466,11 @@ def checkout(request):
                 },
             )
 
+        cart_summary = _get_checkout_cart_summary(request)
+        if cart_summary is None:
+            messages.info(request, "Your cart is empty.")
+            return redirect("store:cart")
+
         return render(
             request,
             "store/checkout.html",
@@ -391,6 +480,14 @@ def checkout(request):
                 "total": cart_summary["total"],
             },
         )
+
+    cart_summary = _get_checkout_cart_summary(request)
+    if cart_summary is None:
+        messages.info(request, "Your cart is empty.")
+        return redirect("store:cart")
+    if cart_summary["invalid"]:
+        messages.error(request, "One or more items in your cart are no longer available in the requested quantity.")
+        return redirect("store:cart")
 
     form = CheckoutForm(initial={"email": request.user.email or ""})
     return render(
@@ -402,3 +499,13 @@ def checkout(request):
             "total": cart_summary["total"],
         },
     )
+
+
+@login_required(login_url="store:login")
+def order_confirmation(request, pk):
+    order = get_object_or_404(
+        Order.objects.prefetch_related("items"),
+        pk=pk,
+        user=request.user,
+    )
+    return render(request, "store/order_confirmation.html", {"order": order})

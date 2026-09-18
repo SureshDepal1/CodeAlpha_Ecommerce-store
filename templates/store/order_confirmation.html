@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Order Confirmation | Simple E-commerce Store{% endblock %}
+
+{% block content %}
+<main class="checkout-page">
+    <div class="container checkout-layout">
+        <section class="checkout-form-panel">
+            <p class="eyebrow">Order confirmed</p>
+            <h1>Your order has been placed successfully.</h1>
+            <p>Order #{{ order.pk }} | {{ order.get_status_display }}</p>
+            <p><strong>Order date:</strong> {{ order.created_at|date:"F j, Y, g:i a" }}</p>
+            <p><strong>Customer:</strong> {{ order.full_name }}</p>
+            <p><strong>Email:</strong> {{ order.email }}</p>
+            <p><strong>Shipping address:</strong><br>{{ order.address }}, {{ order.city }}, {{ order.state }} {{ order.postal_code }}, {{ order.country }}</p>
+            <a class="button" href="{% url 'store:product_list' %}">Continue Shopping</a>
+        </section>
+
+        <aside class="checkout-summary">
+            <h2>Order Summary</h2>
+            {% for item in order.items.all %}
+                <div class="checkout-line">
+                    <div>
+                        <strong>{{ item.product_name }}</strong>
+                        <span>Price: ${{ item.price|floatformat:2 }}</span>
+                        <span>Qty: {{ item.quantity }}</span>
+                    </div>
+                    <span>${{ item.subtotal|floatformat:2 }}</span>
+                </div>
+            {% endfor %}
+            <div class="checkout-total-row">
+                <span>Total</span>
+                <strong>${{ order.total_amount|floatformat:2 }}</strong>
+            </div>
+        </aside>
+    </div>
+</main>
+{% endblock %}
