@@ -174,6 +174,14 @@ def home(request):
     return render(request, "store/home.html")
 
 
+def custom_404(request, exception):
+    return render(request, "404.html", status=404)
+
+
+def custom_500(request):
+    return render(request, "500.html", status=500)
+
+
 def product_list(request):
     query = request.GET.get("q", "").strip()
     selected_category = request.GET.get("category", "").strip()
@@ -253,7 +261,7 @@ def _parse_filter_price(value, label, request):
     except (TypeError, ValueError, InvalidOperation):
         messages.error(request, f"Please enter a valid {label} price.")
         return None
-    if not parsed_value.is_finite() or parsed_value < 0:
+    if not parsed_value.is_finite() or parsed_value < 0 or parsed_value > Decimal("99999999.99"):
         messages.error(request, f"Please enter a valid {label} price.")
         return None
     return parsed_value

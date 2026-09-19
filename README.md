@@ -138,3 +138,7 @@ Authenticated customers can view their own orders at `/orders/`, open complete o
 ## Step 12 - Product Search and Filtering
 
 The products page now supports GET-based search across product names, descriptions, and categories, dynamic category filtering, availability filtering, Decimal-safe price ranges, and fixed-option sorting. Filters can be combined, preserve their values in the responsive filter UI, show result counts, and provide clear empty states and a Clear Filters link. Automated tests cover search, categories, prices, availability, sorting, combined filters, and existing feature regressions.
+
+## Step 13 - Security and Error Handling
+
+Security-sensitive settings are configurable through `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`, and `DJANGO_SECURE_DEPLOYMENT`. Local development remains available over HTTP, while production can enable secure cookies, HTTPS redirect, HSTS, content-type protection, same-origin referrer policy, and clickjacking protection. Authentication, CSRF, cart quantities, server-side order totals, ownership checks, filter input, and expected errors are covered by security-focused tests. Custom 404 and 500 pages avoid exposing technical details. For production, set `DJANGO_DEBUG=False`, provide a strong `DJANGO_SECRET_KEY`, configure `DJANGO_ALLOWED_HOSTS`, and set `DJANGO_SECURE_DEPLOYMENT=True` behind HTTPS.

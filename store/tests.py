@@ -2,12 +2,15 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.hashers import check_password
+from django.conf import settings
 from django.db import DatabaseError
-from django.test import TestCase
+from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from .models import Order, OrderItem, Product
+from .views import custom_500
 
 
 User = get_user_model()
@@ -1695,4 +1698,197 @@ class OrderHistoryTests(TestCase):
 
         self.assertContains(response, reverse("store:order_history"))
         self.assertContains(response, reverse("store:order_detail", args=[order.pk]))
+
+
+class SecurityAndErrorHandlingTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="securityuser",
+            password="StrongPassword123!",
+            email="security@example.com",
+        )
+        self.other_user = User.objects.create_user(
+            username="securityother",
+            password="StrongPassword123!",
+        )
+        self.product = Product.objects.create(
+            name="Secure Product",
+            description="A product for security tests.",
+            price="25.00",
+            category="General",
+            stock=3,
+            is_available=True,
+        )
+        self.checkout_data = {
+            "full_name": "Security Customer",
+            "email": "customer@example.com",
+            "phone": "03001234567",
+            "address": "123 Secure Street",
+            "city": "Karachi",
+            "state": "Sindh",
+            "postal_code": "74000",
+            "country": "Pakistan",
+            "review_only": "1",
+        }
+
+    def set_cart(self, client, cart=None):
+        session = client.session
+        session["cart"] = cart or {str(self.product.pk): 1}
+        session.save()
+
+    def test_anonymous_users_cannot_access_private_routes(self):
+        private_urls = [
+            reverse("store:cart"),
+            reverse("store:checkout"),
+            reverse("store:order_history"),
+        ]
+
+        for url in private_urls:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 302)
+                self.assertIn(reverse("store:login"), response.url)
+
+    def test_anonymous_users_cannot_change_cart_or_place_order(self):
+        add_url = reverse("store:add_to_cart", args=[self.product.pk])
+        checkout_url = reverse("store:checkout")
+
+        self.assertEqual(self.client.post(add_url).status_code, 302)
+        self.assertEqual(self.client.post(checkout_url, self.checkout_data).status_code, 302)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_get_cannot_change_cart_or_create_order(self):
+        self.client.force_login(self.user)
+        self.set_cart(self.client)
+        add_url = reverse("store:add_to_cart", args=[self.product.pk])
+        original_cart = self.client.session["cart"].copy()
+
+        self.assertEqual(self.client.get(add_url).status_code, 405)
+        self.assertEqual(self.client.get(reverse("store:checkout")).status_code, 200)
+        self.assertEqual(self.client.session["cart"], original_cart)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_csrf_rejects_state_changing_cart_and_order_posts(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
+        self.set_cart(csrf_client)
+
+        add_response = csrf_client.post(reverse("store:add_to_cart", args=[self.product.pk]))
+        order_response = csrf_client.post(reverse("store:checkout"), self.checkout_data)
+
+        self.assertEqual(add_response.status_code, 403)
+        self.assertEqual(order_response.status_code, 403)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_negative_zero_and_non_numeric_cart_quantities_are_rejected(self):
+        self.client.force_login(self.user)
+        update_url = reverse("store:update_cart", args=[self.product.pk])
+
+        for quantity in ("-1", "0", "abc"):
+            with self.subTest(quantity=quantity):
+                self.set_cart(self.client, {str(self.product.pk): 1})
+                response = self.client.post(update_url, {"quantity": quantity})
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(self.client.session["cart"], {str(self.product.pk): 1})
+
+    def test_excessive_quantity_does_not_reduce_stock_or_create_order(self):
+        self.client.force_login(self.user)
+        self.set_cart(self.client, {str(self.product.pk): 99})
+
+        response = self.client.post(reverse("store:checkout"), self.checkout_data)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Order.objects.count(), 0)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 3)
+
+    def test_invalid_product_id_is_handled_without_server_error(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("store:add_to_cart", args=[999999]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_unavailable_product_cannot_be_added_or_ordered(self):
+        self.product.is_available = False
+        self.product.save()
+        self.client.force_login(self.user)
+
+        add_response = self.client.post(reverse("store:add_to_cart", args=[self.product.pk]))
+        self.set_cart(self.client)
+        order_response = self.client.post(reverse("store:checkout"), self.checkout_data)
+
+        self.assertEqual(add_response.status_code, 302)
+        self.assertEqual(order_response.status_code, 302)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_fake_submitted_total_does_not_change_server_calculated_order_total(self):
+        self.client.force_login(self.user)
+        self.set_cart(self.client, {str(self.product.pk): 2})
+        fake_total_data = self.checkout_data | {"total": "0.01", "price": "0.01"}
+
+        response = self.client.post(reverse("store:checkout"), fake_total_data)
+
+        order = Order.objects.get()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(order.total_amount, Decimal("50.00"))
+
+    def test_invalid_filter_input_and_sort_are_safe(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("store:product_list"),
+            {"min_price": "not-a-price", "max_price": "-5", "sort": "-created_at"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Please enter a valid minimum price.")
+        self.assertContains(response, "Please enter a valid maximum price.")
+        self.assertEqual(response.context["filters"]["sort"], "newest")
+
+    def test_order_detail_denies_another_users_order(self):
+        order = Order.objects.create(
+            user=self.other_user,
+            full_name="Private Customer",
+            email="private@example.com",
+            phone="03000000000",
+            address="Private Address",
+            city="Karachi",
+            state="Sindh",
+            postal_code="74000",
+            country="Pakistan",
+            total_amount="25.00",
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("store:order_detail", args=[order.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    @override_settings(DEBUG=False)
+    def test_custom_404_page_is_rendered_without_debug_details(self):
+        response = self.client.get("/security-missing-page/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTemplateUsed(response, "404.html")
+        self.assertContains(response, "Page not found.", status_code=404)
+        self.assertNotContains(response, "Traceback", status_code=404)
+
+    def test_custom_500_page_is_rendered_without_internal_details(self):
+        request = RequestFactory().get("/error/")
+        request.session = self.client.session
+        request.user = AnonymousUser()
+
+        response = custom_500(request)
+
+        self.assertEqual(response.status_code, 500)
+        self.assertContains(response, "Something went wrong.", status_code=500)
+        self.assertNotContains(response, "SECRET_KEY", status_code=500)
+
+    def test_security_defaults_are_safe_for_local_development(self):
+        self.assertTrue(settings.SESSION_COOKIE_HTTPONLY)
+        self.assertEqual(settings.SESSION_COOKIE_SAMESITE, "Lax")
+        self.assertEqual(settings.CSRF_COOKIE_SAMESITE, "Lax")
+        self.assertFalse(settings.SECURE_SSL_REDIRECT)
+        self.assertEqual(settings.X_FRAME_OPTIONS, "DENY")
 

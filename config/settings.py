@@ -1,13 +1,27 @@
 """Django settings for the Simple E-commerce Store project."""
 
+import os
 from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure-development-key-change-before-production"
-DEBUG = True
-ALLOWED_HOSTS = []
+
+def _env_bool(name, default=False):
+    return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+
+
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "development-only-key-change-in-production-use-an-environment-secret",
+)
+DEBUG = _env_bool("DJANGO_DEBUG", True)
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
+SECURE_DEPLOYMENT = _env_bool("DJANGO_SECURE_DEPLOYMENT", False)
 
 
 INSTALLED_APPS = [
@@ -85,3 +99,16 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = SECURE_DEPLOYMENT
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = SECURE_DEPLOYMENT
+SECURE_SSL_REDIRECT = SECURE_DEPLOYMENT
+SECURE_HSTS_SECONDS = 31536000 if SECURE_DEPLOYMENT else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_DEPLOYMENT
+SECURE_HSTS_PRELOAD = SECURE_DEPLOYMENT
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"

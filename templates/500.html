@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Something Went Wrong | Simple E-commerce Store{% endblock %}
+
+{% block content %}
+<main class="error-page">
+    <div class="container error-page__content">
+        <p class="eyebrow">Temporary error</p>
+        <h1>Something went wrong.</h1>
+        <p>We could not complete that request. Please try again or return to the store.</p>
+        <div class="error-page__actions">
+            <a class="button" href="{% url 'store:home' %}">Return Home</a>
+            <a class="button button--secondary" href="{% url 'store:product_list' %}">Browse Products</a>
+        </div>
+    </div>
+</main>
+{% endblock %}

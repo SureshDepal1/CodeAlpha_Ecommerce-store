@@ -1013,6 +1013,32 @@ h1 {
     background: #e9f1ef;
 }
 
+.error-page {
+    padding: 7rem 0;
+}
+
+.error-page__content {
+    max-width: 720px;
+}
+
+.error-page__content h1 {
+    max-width: none;
+    margin-bottom: 1rem;
+    font-size: clamp(3rem, 7vw, 6rem);
+}
+
+.error-page__content > p:not(.eyebrow) {
+    margin-bottom: 2rem;
+    color: var(--muted);
+    font-size: 1.15rem;
+}
+
+.error-page__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
 .registration-page {
     padding: 5rem 0 6rem;
 }
