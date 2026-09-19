@@ -171,7 +171,8 @@ def _normalize_cart(session):
 
 
 def home(request):
-    return render(request, "store/home.html")
+    featured_products = Product.objects.filter(is_available=True).order_by("-created_at")[:4]
+    return render(request, "store/home.html", {"featured_products": featured_products})
 
 
 def custom_404(request, exception):

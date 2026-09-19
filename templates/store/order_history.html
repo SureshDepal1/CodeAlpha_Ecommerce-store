@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}My Orders | Simple E-commerce Store{% endblock %}
+{% block title %}My orders | DepalNova{% endblock %}
 
 {% block content %}
 <main class="orders-page">
@@ -20,7 +20,7 @@
                                 <p class="order-card__number">Order #{{ order.pk }}</p>
                                 <p class="order-card__date">{{ order.created_at|date:"F j, Y, g:i a" }}</p>
                             </div>
-                            <span class="order-status">{{ order.get_status_display }}</span>
+                            <span class="order-status order-status--{{ order.status }}">{{ order.get_status_display }}</span>
                         </div>
                         <div class="order-card__summary">
                             <span>{{ order.item_count }} item{{ order.item_count|pluralize }}</span>

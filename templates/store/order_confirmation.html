@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Order Confirmation | Simple E-commerce Store{% endblock %}
+{% block title %}Order confirmed | DepalNova{% endblock %}
 
 {% block content %}
 <main class="checkout-page">
     <div class="container checkout-layout">
-        <section class="checkout-form-panel">
-            <p class="eyebrow">Order confirmed</p>
-            <h1>Your order has been placed successfully.</h1>
-            <p>Order #{{ order.pk }} | {{ order.get_status_display }}</p>
+        <section class="checkout-form-panel confirmation-panel">
+            <div class="confirmation-badge" aria-hidden="true">✓</div>
+            <p class="eyebrow">Thank you for shopping DepalNova</p>
+            <h1>Order confirmed.</h1>
+            <p class="confirmation-order-number">Order #{{ order.pk }} | {{ order.get_status_display }}</p>
             <p><strong>Order date:</strong> {{ order.created_at|date:"F j, Y, g:i a" }}</p>
             <p><strong>Customer:</strong> {{ order.full_name }}</p>
             <p><strong>Email:</strong> {{ order.email }}</p>

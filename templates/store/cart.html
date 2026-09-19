@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Your Cart | Simple E-commerce Store{% endblock %}
+{% block title %}Your cart | DepalNova{% endblock %}
 
 {% block content %}
 <main class="cart-page">
     <div class="container">
         <section class="cart-header" aria-labelledby="cart-title">
-            <p class="eyebrow">Your basket</p>
-            <h1 id="cart-title">Shopping Cart</h1>
+            <p class="eyebrow">Ready when you are</p>
+            <h1 id="cart-title">Your cart</h1>
         </section>
 
         {% if cart_items %}
@@ -19,13 +19,13 @@
                                 {% if item.product.image %}
                                     <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
                                 {% else %}
-                                    <span>No image available</span>
+                                    <span class="image-placeholder"><b>{{ item.product.category|slice:':1'|upper }}</b><small>DepalNova edit</small></span>
                                 {% endif %}
                             </div>
 
                             <div class="cart-item__details">
                                 <h2>{{ item.product.name }}</h2>
-                                <p class="cart-item__price">Price: ${{ item.product.price|floatformat:2 }}</p>
+                                <p class="cart-item__price">Unit price: ${{ item.product.price|floatformat:2 }}</p>
 
                                 <div class="cart-quantity-controls" aria-label="Quantity controls for {{ item.product.name }}">
                                     <form method="post" action="{% url 'store:decrease_cart_quantity' item.product.pk %}" class="cart-action-form">
@@ -43,6 +43,7 @@
                                             value="{{ item.quantity }}"
                                             min="1"
                                             max="{{ item.product.stock }}"
+                                            class="cart-quantity-input"
                                             aria-label="Quantity for {{ item.product.name }}">
                                         <button type="submit">Update</button>
                                     </form>
@@ -53,7 +54,7 @@
                                     </form>
                                 </div>
 
-                                <p class="cart-item__subtotal">Subtotal: ${{ item.subtotal|floatformat:2 }}</p>
+                                <p class="cart-item__subtotal">Line total: ${{ item.subtotal|floatformat:2 }}</p>
 
                                 <form method="post" action="{% url 'store:remove_from_cart' item.product.pk %}" class="cart-remove-form">
                                     {% csrf_token %}
@@ -65,14 +66,18 @@
                 </div>
 
                 <aside class="cart-summary">
-                    <h2>Cart Total</h2>
-                    <p class="cart-summary__total">Total: ${{ total|floatformat:2 }}</p>
-                    <a class="button button--secondary" href="{% url 'store:checkout' %}">Proceed to Checkout</a>
-                    <a class="button button--secondary" href="{% url 'store:product_list' %}">Continue Shopping</a>
+                    <h2>Order summary</h2>
+                    <div class="cart-summary__meta">
+                        <span>{{ cart_items|length }} item{% if cart_items|length != 1 %}s{% endif %}</span>
+                        <span>Total: ${{ total|floatformat:2 }}</span>
+                    </div>
+                    <a class="button" href="{% url 'store:checkout' %}">Proceed to Checkout</a>
+                    <a class="button button--secondary cart-continue-link" href="{% url 'store:product_list' %}">Continue Shopping</a>
                 </aside>
             </div>
         {% else %}
             <div class="empty-cart" aria-live="polite">
+                <div class="empty-cart__icon" aria-hidden="true">🛒</div>
                 <p>Your cart is empty.</p>
                 <a class="button" href="{% url 'store:product_list' %}">Continue Shopping</a>
             </div>

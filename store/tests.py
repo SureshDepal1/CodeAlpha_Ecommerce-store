@@ -5,10 +5,12 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.hashers import check_password
 from django.conf import settings
+from django.core.management import call_command
 from django.db import DatabaseError
 from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
+from .management.commands import seed_demo_products
 from .models import Order, OrderItem, Product
 from .views import custom_500
 
@@ -445,6 +447,37 @@ class RegistrationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(email="newshopper@example.com").exists())
+
+
+class DemoSeedCommandTests(TestCase):
+    def test_seed_demo_products_is_idempotent(self):
+        names = [item["name"] for item in seed_demo_products.DEMO_BLUEPRINTS[:3]]
+
+        call_command("seed_demo_products", count=3, no_images=True)
+        first_count = Product.objects.filter(name__in=names).count()
+
+        call_command("seed_demo_products", count=3, no_images=True)
+        second_count = Product.objects.filter(name__in=names).count()
+
+        self.assertEqual(first_count, 3)
+        self.assertEqual(second_count, 3)
+
+    def test_clear_demo_products_only_removes_seeded_items(self):
+        seeded_names = [item["name"] for item in seed_demo_products.DEMO_BLUEPRINTS[:2]]
+        Product.objects.create(
+            name="Legitimate Real Product",
+            description="Real product that should stay.",
+            price="24.99",
+            category="General",
+            stock=10,
+            is_available=True,
+        )
+
+        call_command("seed_demo_products", count=2, no_images=True)
+        call_command("seed_demo_products", count=2, no_images=True, clear_demo=True)
+
+        self.assertFalse(Product.objects.filter(name__in=seeded_names).exists())
+        self.assertTrue(Product.objects.filter(name="Legitimate Real Product").exists())
 
 
 class AuthenticationTests(TestCase):

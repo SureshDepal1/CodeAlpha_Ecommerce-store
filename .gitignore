@@ -8,3 +8,7 @@ __pycache__/
 # Local development files
 staticfiles/
 media/
+seed_data/*.jpg
+seed_data/*.jpeg
+seed_data/*.png
+seed_data/*.webp

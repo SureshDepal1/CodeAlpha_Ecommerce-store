@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Login | Simple E-commerce Store{% endblock %}
+{% block title %}Log in | DepalNova{% endblock %}
 
 {% block content %}
 <main class="registration-page">
     <section class="registration-card container" aria-labelledby="login-title">
-        <p class="eyebrow">Welcome back</p>
-        <h1 id="login-title">Login</h1>
-        <p class="registration-intro">Sign in to continue to your account.</p>
+        <p class="eyebrow">Welcome back to DepalNova</p>
+        <h1 id="login-title">Log in</h1>
+        <p class="registration-intro">Sign in to continue your considered shopping experience.</p>
 
         <form class="registration-form" method="post">
             {% csrf_token %}
@@ -33,7 +33,7 @@
         </form>
 
         <p class="registration-links">
-            <a href="{% url 'store:register' %}">Register</a>
+            <a href="{% url 'store:register' %}">Create an account</a>
             <span aria-hidden="true">|</span>
             <a href="{% url 'store:home' %}">Home</a>
             <span aria-hidden="true">|</span>

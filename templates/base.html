@@ -4,28 +4,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Simple E-commerce Store">
-    <title>{% block title %}Simple E-commerce Store{% endblock %}</title>
+    <meta name="description" content="DepalNova — discover more, shop better.">
+    <meta name="theme-color" content="#1d5b4f">
+    <title>{% block title %}DepalNova{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231d5b4f'/%3E%3Cpath d='M18 16h16c12 0 22 8 22 20S46 56 34 56H18V16zm9 9v22h7c7 0 13-4 13-11s-6-11-13-11h-7z' fill='%23fff'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
     <header class="site-header">
         <nav class="navbar container" aria-label="Main navigation">
-            <a class="brand" href="{% url 'store:home' %}">Simple E-commerce Store</a>
-            <div class="nav-links">
+            <a class="brand" href="{% url 'store:home' %}" aria-label="DepalNova home"><span class="brand-mark">D</span><span>Depal<span class="brand-accent">Nova</span></span></a>
+            <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" aria-label="Open navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+            <div class="nav-links" id="primary-navigation">
                 <a class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'store:home' %}">Home</a>
-                <a class="{% if request.resolver_match.url_name == 'product_list' %}active{% endif %}" href="{% url 'store:product_list' %}">Products</a>
+                <a class="{% if request.resolver_match.url_name == 'product_list' %}active{% endif %}" href="{% url 'store:product_list' %}">Shop</a>
                 {% if user.is_authenticated %}
-                    <a class="{% if request.resolver_match.url_name == 'cart' %}active{% endif %}" href="{% url 'store:cart' %}">Cart ({{ cart_count }})</a>
+                    <a class="nav-cart {% if request.resolver_match.url_name == 'cart' %}active{% endif %}" href="{% url 'store:cart' %}">
+                        <svg class="nav-cart__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 8V7a5 5 0 0 1 10 0v1M5.5 8.5h13l-1.2 10.1a2 2 0 0 1-2 1.7H8.7a2 2 0 0 1-2-1.7L5.5 8.5Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <span>Cart</span>
+                        {% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}
+                        <span class="sr-only">Cart ({{ cart_count }})</span>
+                    </a>
                     <a class="{% if request.resolver_match.url_name == 'order_history' or request.resolver_match.url_name == 'order_detail' %}active{% endif %}" href="{% url 'store:order_history' %}">My Orders</a>
-                    <span class="nav-welcome">Welcome, {{ user.username }}</span>
+                    <span class="nav-welcome">Hi, {{ user.username }}<span class="sr-only">Welcome, {{ user.username }}</span></span>
                     <form class="logout-form" method="post" action="{% url 'store:logout' %}">
                         {% csrf_token %}
                         <button type="submit">Logout</button>
                     </form>
                 {% else %}
-                    <a class="{% if request.resolver_match.url_name == 'login' %}active{% endif %}" href="{% url 'store:login' %}">Login</a>
-                    <a class="{% if request.resolver_match.url_name == 'register' %}active{% endif %}" href="{% url 'store:register' %}">Register</a>
+                    <a class="{% if request.resolver_match.url_name == 'login' %}active{% endif %}" href="{% url 'store:login' %}">Log in</a>
+                    <a class="button button--small" href="{% url 'store:register' %}">Create account</a>
                 {% endif %}
             </div>
         </nav>
@@ -34,7 +45,7 @@
     {% if messages %}
         <div class="site-messages container" aria-live="polite">
             {% for message in messages %}
-                <p class="site-message">{{ message }}</p>
+                <p class="site-message site-message--{{ message.tags }}">{{ message }}</p>
             {% endfor %}
         </div>
     {% endif %}
@@ -43,8 +54,9 @@
 
     <footer class="site-footer">
         <div class="container footer-content">
-            <p>&copy; 2026 Simple E-commerce Store</p>
-            <p>Built with care for a simpler online shop.</p>
+            <div><a class="brand brand--footer" href="{% url 'store:home' %}"><span class="brand-mark">D</span><span>Depal<span class="brand-accent">Nova</span></span></a><p>Discover more. Shop better.</p></div>
+            <div class="footer-links"><a href="{% url 'store:home' %}">Home</a><a href="{% url 'store:product_list' %}">Shop</a>{% if user.is_authenticated %}<a href="{% url 'store:order_history' %}">My Orders</a>{% else %}<a href="{% url 'store:login' %}">Log in</a>{% endif %}</div>
+            <p class="footer-copyright">&copy; 2026 DepalNova</p>
         </div>
     </footer>
 

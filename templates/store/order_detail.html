@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Order #{{ order.pk }} | Simple E-commerce Store{% endblock %}
+{% block title %}Order #{{ order.pk }} | DepalNova{% endblock %}
 
 {% block content %}
 <main class="orders-page">
@@ -16,7 +16,7 @@
                 <p class="eyebrow">Order details</p>
                 <h1>Order #{{ order.pk }}</h1>
             </div>
-            <span class="order-status">{{ order.get_status_display }}</span>
+            <span class="order-status order-status--{{ order.status }}">{{ order.get_status_display }}</span>
         </header>
 
         <div class="order-detail-layout">

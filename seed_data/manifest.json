@@ -1,0 +1,19 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": "Stoneware Ceramic Mug",
+      "image_filename": null
+    },
+    {
+      "id": 2,
+      "name": "Linen Throw Blanket",
+      "image_filename": null
+    },
+    {
+      "id": 3,
+      "name": "Structured Canvas Tote",
+      "image_filename": null
+    }
+  ]
+}
