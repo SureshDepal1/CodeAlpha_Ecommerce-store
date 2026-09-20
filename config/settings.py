@@ -7,8 +7,60 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def load_dotenv(path):
+    """Load simple KEY=VALUE pairs without replacing real environment values."""
+    try:
+        contents = Path(path).read_text(encoding="utf-8-sig")
+    except OSError:
+        return
+
+    for raw_line in contents.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        if key:
+            os.environ.setdefault(key, value)
+
+
+load_dotenv(BASE_DIR / ".env")
+
+
 def _env_bool(name, default=False):
     return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_placeholder(value):
+    return value.strip().lower() in {
+        "paste_app_password_here",
+        "your-email@gmail.com",
+        "owner@example.com",
+        "your-store@gmail.com",
+    }
+
+
+def _env_int(name, default):
+    try:
+        return int(os.environ.get(name, str(default)).strip())
+    except (TypeError, ValueError):
+        return default
+
+
+def _normalize_password(value):
+    return "".join(value.split())
+
+
+def _email_transport():
+    use_ssl = _env_bool("EMAIL_USE_SSL", False)
+    use_tls = _env_bool("EMAIL_USE_TLS", not use_ssl)
+    if use_ssl:
+        use_tls = False
+    port = _env_int("EMAIL_PORT", 465 if use_ssl else 587)
+    return use_ssl, use_tls, port
 
 
 SECRET_KEY = os.environ.get(
@@ -101,13 +153,18 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-if EMAIL_HOST_USER.strip() and EMAIL_HOST_PASSWORD.strip():
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "").strip()
+EMAIL_HOST_PASSWORD = _normalize_password(os.environ.get("EMAIL_HOST_PASSWORD", ""))
+EMAIL_USE_SSL, EMAIL_USE_TLS, EMAIL_PORT = _email_transport()
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_CONFIGURED = bool(
+    EMAIL_HOST_USER
+    and EMAIL_HOST_PASSWORD
+    and not _is_placeholder(EMAIL_HOST_USER)
+    and not _is_placeholder(EMAIL_HOST_PASSWORD)
+)
+if EMAIL_CONFIGURED:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-    EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
-    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
-    EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", True)
     EMAIL_TIMEOUT = 10
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
@@ -122,6 +179,42 @@ ORDER_NOTIFICATION_EMAILS = [
     if email.strip()
 ]
 SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
+
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "email": {
+            "format": "{asctime} {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "email_console": {
+            "class": "logging.StreamHandler",
+            "level": "INFO",
+            "formatter": "email",
+        },
+        "email_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(LOG_DIR / "email.log"),
+            "maxBytes": 1024 * 1024,
+            "backupCount": 3,
+            "encoding": "utf-8",
+            "level": "INFO",
+            "formatter": "email",
+        },
+    },
+    "loggers": {
+        "store": {
+            "handlers": ["email_console", "email_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
