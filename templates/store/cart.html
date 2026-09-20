@@ -24,7 +24,8 @@
                             </div>
 
                             <div class="cart-item__details">
-                                <h2>{{ item.product.name }}</h2>
+                                <p class="product-category">{{ item.product.category }}</p>
+                                <h2><a href="{% url 'store:product_detail' item.product.pk %}">{{ item.product.name }}</a></h2>
                                 <p class="cart-item__price">Unit price: ${{ item.product.price|floatformat:2 }}</p>
 
                                 <div class="cart-quantity-controls" aria-label="Quantity controls for {{ item.product.name }}">

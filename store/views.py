@@ -2,6 +2,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db import DatabaseError, transaction
 from django.db.models import Count
 from django.db.models import Q
@@ -10,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .forms import CheckoutForm, LoginForm, RegistrationForm
+from .emails import send_order_emails
 from .models import Order, OrderItem, Product
 
 
@@ -228,6 +230,11 @@ def product_list(request):
     if selected_sort not in sort_options:
         selected_sort = "newest"
     products = products.order_by(sort_options[selected_sort])
+    result_count = products.count()
+    paginator = Paginator(products, 24)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    filter_query = request.GET.copy()
+    filter_query.pop("page", None)
 
     category_labels = {}
     for category in Product.objects.filter(is_available=True).values_list("category", flat=True):
@@ -239,8 +246,11 @@ def product_list(request):
         request,
         "store/product_list.html",
         {
-            "products": products,
-            "result_count": products.count(),
+            "products": page_obj,
+            "page_obj": page_obj,
+            "paginator": paginator,
+            "filter_query": filter_query.urlencode(),
+            "result_count": result_count,
             "categories": categories,
             "filters": {
                 "q": query,
@@ -536,6 +546,7 @@ def checkout(request):
                     request.session.modified = True
                     messages.error(request, "We could not place your order. Please try again.")
                     return redirect("store:checkout")
+                transaction.on_commit(lambda: send_order_emails(order))
                 messages.success(request, "Your order has been placed successfully.")
                 return redirect("store:order_confirmation", pk=order.pk)
 

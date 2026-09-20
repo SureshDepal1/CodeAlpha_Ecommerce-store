@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your DepalNova order has been placed</title>
+</head>
+<body style="margin:0;background:#f6f7f3;color:#24332f;font-family:Arial,sans-serif;line-height:1.5;">
+    <div style="max-width:600px;margin:0 auto;padding:24px 12px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffff;border-collapse:collapse;">
+            <tr><td style="background:#1d5b4f;color:#ffffff;padding:24px;text-align:center;font-size:24px;font-weight:bold;">DepalNova</td></tr>
+            <tr><td style="padding:28px 24px;">
+                <h1 style="margin:0 0 12px;color:#1d5b4f;font-size:24px;">Your order has been placed</h1>
+                <p>Thank you for your order, {{ order.full_name }}.</p>
+                <p><strong>Order #{{ order.pk }}</strong><br>Order date: {{ order.created_at|date:"F j, Y, g:i a" }}<br>Status: {{ order.get_status_display }}</p>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="8" style="border-collapse:collapse;margin:20px 0;font-size:14px;">
+                    <tr style="background:#dba85a;color:#24332f;"><th align="left">Item</th><th align="right">Qty</th><th align="right">Unit</th><th align="right">Subtotal</th></tr>
+                    {% for item in items %}<tr style="border-bottom:1px solid #e1e6df;"><td>{{ item.product_name }}</td><td align="right">{{ item.quantity }}</td><td align="right">${{ item.price|floatformat:2 }}</td><td align="right">${{ item.subtotal|floatformat:2 }}</td></tr>{% endfor %}
+                    <tr><td colspan="3" align="right"><strong>Total</strong></td><td align="right"><strong>${{ order.total_amount|floatformat:2 }}</strong></td></tr>
+                </table>
+                <h2 style="color:#1d5b4f;font-size:18px;">Shipping address</h2>
+                <p>{{ order.full_name }}<br>{{ order.address }}<br>{{ order.city }}, {{ order.state }} {{ order.postal_code }}<br>{{ order.country }}</p>
+                <p style="margin:28px 0;text-align:center;"><a href="{{ order_url }}" style="background:#1d5b4f;color:#ffffff;display:inline-block;padding:12px 20px;text-decoration:none;">View your order</a></p>
+            </td></tr>
+        </table>
+    </div>
+</body>
+</html>

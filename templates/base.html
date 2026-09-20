@@ -5,41 +5,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="DepalNova — discover more, shop better.">
-    <meta name="theme-color" content="#1d5b4f">
+    <meta name="theme-color" content="#131921">
     <title>{% block title %}DepalNova{% endblock %}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231d5b4f'/%3E%3Cpath d='M18 16h16c12 0 22 8 22 20S46 56 34 56H18V16zm9 9v22h7c7 0 13-4 13-11s-6-11-13-11h-7z' fill='%23fff'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23131921'/%3E%3Cpath d='M18 16h14c13 0 22 8 22 20 0 11-9 20-22 20H18V16Zm10 10v20h4c8 0 13-4 13-10s-5-10-13-10h-4Z' fill='%23ffffff'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
     <header class="site-header">
-        <nav class="navbar container" aria-label="Main navigation">
-            <a class="brand" href="{% url 'store:home' %}" aria-label="DepalNova home"><span class="brand-mark">D</span><span>Depal<span class="brand-accent">Nova</span></span></a>
-            <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" aria-label="Open navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
-            <div class="nav-links" id="primary-navigation">
-                <a class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'store:home' %}">Home</a>
-                <a class="{% if request.resolver_match.url_name == 'product_list' %}active{% endif %}" href="{% url 'store:product_list' %}">Shop</a>
-                {% if user.is_authenticated %}
-                    <a class="nav-cart {% if request.resolver_match.url_name == 'cart' %}active{% endif %}" href="{% url 'store:cart' %}">
-                        <svg class="nav-cart__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 8V7a5 5 0 0 1 10 0v1M5.5 8.5h13l-1.2 10.1a2 2 0 0 1-2 1.7H8.7a2 2 0 0 1-2-1.7L5.5 8.5Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        <span>Cart</span>
-                        {% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}
-                        <span class="sr-only">Cart ({{ cart_count }})</span>
+        <div class="topbar">
+            <div class="container topbar__inner">
+                <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" aria-label="Open navigation">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+
+                <a class="brand" href="{% url 'store:home' %}" aria-label="DepalNova home">
+                    <span class="brand-mark" aria-hidden="true">D</span>
+                    <span class="brand-text">Depal<span class="brand-accent">Nova</span></span>
+                </a>
+
+                <form class="header-search" action="{% url 'store:product_list' %}" method="get" role="search">
+                    <label class="sr-only" for="header-search-input">Search products</label>
+                    <select class="header-search__select" name="category" aria-label="Category filter">
+                        <option value="">All</option>
+                        {% for category in nav_categories %}
+                            <option value="{{ category }}" {% if request.GET.category == category %}selected{% endif %}>{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                    <input id="header-search-input" class="header-search__input" type="search" name="q" value="{{ request.GET.q|default_if_none:'' }}" placeholder="Search for products" aria-label="Search products">
+                    <button class="header-search__button" type="submit" aria-label="Search">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10.5 3a7.5 7.5 0 1 1 0 15a7.5 7.5 0 0 1 0-15Zm10 18-5.15-5.15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                </form>
+
+                <div class="header-account" aria-label="Account and cart">
+                    {% if user.is_authenticated %}
+                        <div class="account-menu">
+                            <span class="account-menu__greeting">Hello, {{ user.username }}</span>
+                            <a class="account-menu__link" href="{% url 'store:order_history' %}">My Orders</a>
+                            <span class="sr-only">Welcome, {{ user.username }}</span>
+                            <form class="logout-form" method="post" action="{% url 'store:logout' %}">
+                                {% csrf_token %}
+                                <button type="submit">Logout</button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <div class="account-menu account-menu--guest">
+                            <span class="account-menu__greeting">Hello, sign in</span>
+                            <a class="account-menu__link" href="{% url 'store:login' %}">Account</a>
+                            <a class="account-menu__link" href="{% url 'store:register' %}">Register</a>
+                        </div>
+                    {% endif %}
+
+                    <a class="cart-link" href="{% url 'store:cart' %}" aria-label="Cart">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 4h2l2 9h10l2-7H7M8 16.5a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3Zm9 0a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <span>Cart ({{ cart_count }})</span>
                     </a>
-                    <a class="{% if request.resolver_match.url_name == 'order_history' or request.resolver_match.url_name == 'order_detail' %}active{% endif %}" href="{% url 'store:order_history' %}">My Orders</a>
-                    <span class="nav-welcome">Hi, {{ user.username }}<span class="sr-only">Welcome, {{ user.username }}</span></span>
-                    <form class="logout-form" method="post" action="{% url 'store:logout' %}">
-                        {% csrf_token %}
-                        <button type="submit">Logout</button>
-                    </form>
-                {% else %}
-                    <a class="{% if request.resolver_match.url_name == 'login' %}active{% endif %}" href="{% url 'store:login' %}">Log in</a>
-                    <a class="button button--small" href="{% url 'store:register' %}">Create account</a>
-                {% endif %}
+                </div>
             </div>
-        </nav>
+        </div>
+
+        <div class="subnav">
+            <div class="container subnav__inner" id="primary-navigation">
+                <a class="subnav__link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'store:home' %}">All</a>
+                {% for category in nav_categories %}
+                    <a class="subnav__link" href="{% url 'store:product_list' %}?category={{ category|urlencode }}">{{ category }}</a>
+                {% endfor %}
+            </div>
+        </div>
     </header>
 
     {% if messages %}
@@ -53,10 +87,60 @@
     {% block content %}{% endblock %}
 
     <footer class="site-footer">
-        <div class="container footer-content">
-            <div><a class="brand brand--footer" href="{% url 'store:home' %}"><span class="brand-mark">D</span><span>Depal<span class="brand-accent">Nova</span></span></a><p>Discover more. Shop better.</p></div>
-            <div class="footer-links"><a href="{% url 'store:home' %}">Home</a><a href="{% url 'store:product_list' %}">Shop</a>{% if user.is_authenticated %}<a href="{% url 'store:order_history' %}">My Orders</a>{% else %}<a href="{% url 'store:login' %}">Log in</a>{% endif %}</div>
-            <p class="footer-copyright">&copy; 2026 DepalNova</p>
+        <div class="back-to-top">
+            <a href="#top">Back to top</a>
+        </div>
+
+        <div class="container footer-grid">
+            <div class="footer-brand-block">
+                <a class="brand brand--footer" href="{% url 'store:home' %}" aria-label="DepalNova home">
+                    <span class="brand-mark" aria-hidden="true">D</span>
+                    <span class="brand-text">Depal<span class="brand-accent">Nova</span></span>
+                </a>
+                <p>Discover more. Shop better.</p>
+            </div>
+
+            <div class="footer-column">
+                <h3>Shop categories</h3>
+                <ul>
+                    {% for category in nav_categories %}
+                        <li><a href="{% url 'store:product_list' %}?category={{ category|urlencode }}">{{ category }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="footer-column">
+                <h3>Account</h3>
+                <ul>
+                    {% if user.is_authenticated %}
+                        <li><a href="{% url 'store:order_history' %}">My Orders</a></li>
+                    {% else %}
+                        <li><a href="{% url 'store:login' %}">Log in</a></li>
+                        <li><a href="{% url 'store:register' %}">Register</a></li>
+                    {% endif %}
+                    <li><a href="{% url 'store:product_list' %}">Shop</a></li>
+                    <li><a href="{% url 'store:home' %}">Home</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-column">
+                <h3>About DepalNova</h3>
+                <ul>
+                    <li><a href="{% url 'store:home' %}">Our story</a></li>
+                    <li><a href="{% url 'store:product_list' %}">Browse products</a></li>
+                    {% if user.is_authenticated %}
+                        <li><a href="{% url 'store:order_history' %}">Customer account</a></li>
+                    {% else %}
+                        <li><a href="{% url 'store:login' %}">Customer account</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="container footer-bottom__inner">
+                <span>&copy; 2026 DepalNova</span>
+            </div>
         </div>
     </footer>
 

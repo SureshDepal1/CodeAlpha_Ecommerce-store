@@ -263,6 +263,28 @@ class ProductListingTests(TestCase):
         self.assertContains(response, f'href="{reverse("store:product_list")}"')
         self.assertContains(response, "Visible Product")
 
+    def test_product_listing_paginates_results_in_pages_of_24(self):
+        for index in range(25):
+            self.create_filter_product(f"Paged Product {index}", "Description", "General", "25.00")
+
+        response = self.client.get(reverse("store:product_list"), {"page": 2})
+
+        self.assertEqual(response.context["result_count"], 25)
+        self.assertEqual(response.context["page_obj"].number, 2)
+        self.assertEqual(len(response.context["products"]), 1)
+        self.assertContains(response, "Paged Product 0")
+
+    def test_product_listing_pagination_preserves_active_filters(self):
+        for index in range(25):
+            self.create_filter_product(f"Paged Product {index}", "Description", "General", "25.00")
+
+        response = self.client.get(
+            reverse("store:product_list"),
+            {"q": "Paged", "category": "General", "sort": "name_az", "page": 2},
+        )
+
+        self.assertContains(response, "q=Paged&amp;category=General&amp;sort=name_az&amp;page=1")
+
 
 class ProductDetailTests(TestCase):
     def create_product(self, **overrides):
@@ -447,6 +469,55 @@ class RegistrationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(email="newshopper@example.com").exists())
+
+
+class NavCategoriesContextTests(TestCase):
+    def test_nav_categories_context_lists_only_available_unique_categories(self):
+        Product.objects.create(
+            name="Desk Lamp",
+            description="A lamp.",
+            price="39.99",
+            category="Home",
+            stock=5,
+            is_available=True,
+        )
+        Product.objects.create(
+            name="Travel Mug",
+            description="A mug.",
+            price="24.99",
+            category="Kitchen",
+            stock=4,
+            is_available=True,
+        )
+        Product.objects.create(
+            name="Duplicate Home Item",
+            description="Same category.",
+            price="29.99",
+            category="home",
+            stock=2,
+            is_available=True,
+        )
+        Product.objects.create(
+            name="Hidden Product",
+            description="Unavailable.",
+            price="12.99",
+            category="Unavailable",
+            stock=4,
+            is_available=False,
+        )
+        Product.objects.create(
+            name="Blank Category Product",
+            description="No category.",
+            price="12.99",
+            category="   ",
+            stock=2,
+            is_available=True,
+        )
+
+        request = RequestFactory().get("/")
+        context = seed_demo_products.nav_categories(request)
+
+        self.assertEqual(context["nav_categories"], ["Home", "Kitchen"])
 
 
 class DemoSeedCommandTests(TestCase):

@@ -13,6 +13,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
+from store.context_processors import nav_categories
 from store.models import Product
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
