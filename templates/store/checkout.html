@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load store_tags %}
 
 {% block title %}Checkout | DepalNova{% endblock %}
 
@@ -107,16 +108,16 @@
                 <div class="checkout-line">
                     <div>
                         <strong>{{ item.product.name }}</strong>
-                        <span>Price: ${{ item.product.price|floatformat:2 }}</span>
+                        <span>Price: {{ item.product.price|money }}</span>
                         <span>Qty: {{ item.quantity }}</span>
                     </div>
-                    <span>${{ item.subtotal|floatformat:2 }}</span>
+                    <span>{{ item.subtotal|money }}</span>
                 </div>
             {% endfor %}
 
             <div class="checkout-total-row">
                 <span>Total</span>
-                <strong>${{ total|floatformat:2 }}</strong>
+                <strong>{{ total|money }}</strong>
             </div>
 
             {% if review_only %}

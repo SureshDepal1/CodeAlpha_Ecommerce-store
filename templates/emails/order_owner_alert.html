@@ -1,3 +1,4 @@
+{% load store_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,11 +12,11 @@
             <tr><td style="background:#1d5b4f;color:#ffffff;padding:24px;text-align:center;font-size:24px;font-weight:bold;">DepalNova</td></tr>
             <tr><td style="padding:28px 24px;">
                 <h1 style="margin:0 0 12px;color:#1d5b4f;font-size:24px;">New order received</h1>
-                <p><strong>Order #{{ order.pk }}</strong><br>Customer: {{ order.full_name }}<br>Email: {{ order.email }}<br>Total: ${{ order.total_amount|floatformat:2 }}</p>
+                <p><strong>Order #{{ order.pk }}</strong><br>Customer: {{ order.full_name }}<br>Email: {{ order.email }}<br>Total: {{ order.total_amount|money }}</p>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="8" style="border-collapse:collapse;margin:20px 0;font-size:14px;">
                     <tr style="background:#dba85a;color:#24332f;"><th align="left">Item</th><th align="right">Qty</th><th align="right">Unit</th><th align="right">Subtotal</th></tr>
-                    {% for item in items %}<tr style="border-bottom:1px solid #e1e6df;"><td>{{ item.product_name }}</td><td align="right">{{ item.quantity }}</td><td align="right">${{ item.price|floatformat:2 }}</td><td align="right">${{ item.subtotal|floatformat:2 }}</td></tr>{% endfor %}
-                    <tr><td colspan="3" align="right"><strong>Total</strong></td><td align="right"><strong>${{ order.total_amount|floatformat:2 }}</strong></td></tr>
+                    {% for item in items %}<tr style="border-bottom:1px solid #e1e6df;"><td>{{ item.product_name }}</td><td align="right">{{ item.quantity }}</td><td align="right">{{ item.price|money }}</td><td align="right">{{ item.subtotal|money }}</td></tr>{% endfor %}
+                    <tr><td colspan="3" align="right"><strong>Total</strong></td><td align="right"><strong>{{ order.total_amount|money }}</strong></td></tr>
                 </table>
                 <h2 style="color:#1d5b4f;font-size:18px;">Shipping address</h2>
                 <p>{{ order.full_name }}<br>{{ order.address }}<br>{{ order.city }}, {{ order.state }} {{ order.postal_code }}<br>{{ order.country }}</p>

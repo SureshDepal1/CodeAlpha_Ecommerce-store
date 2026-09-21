@@ -1,11 +1,12 @@
-New order #{{ order.pk }} - ${{ order.total_amount|floatformat:2 }} from {{ order.full_name }}
+{% load store_tags %}
+New order #{{ order.pk }} - {{ order.total_amount|money }} from {{ order.full_name }}
 
 Customer: {{ order.full_name }}
 Email: {{ order.email }}
-Order total: ${{ order.total_amount|floatformat:2 }}
+Order total: {{ order.total_amount|money }}
 
 Items:
-{% for item in items %}- {{ item.product_name }} | Quantity: {{ item.quantity }} | Unit price: ${{ item.price|floatformat:2 }} | Subtotal: ${{ item.subtotal|floatformat:2 }}
+{% for item in items %}- {{ item.product_name }} | Quantity: {{ item.quantity }} | Unit price: {{ item.price|money }} | Subtotal: {{ item.subtotal|money }}
 {% endfor %}
 
 Shipping address:

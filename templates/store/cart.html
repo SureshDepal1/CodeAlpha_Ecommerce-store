@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load store_tags %}
 
 {% block title %}Your cart | DepalNova{% endblock %}
 
@@ -26,7 +27,7 @@
                             <div class="cart-item__details">
                                 <p class="product-category">{{ item.product.category }}</p>
                                 <h2><a href="{% url 'store:product_detail' item.product.pk %}">{{ item.product.name }}</a></h2>
-                                <p class="cart-item__price">Unit price: ${{ item.product.price|floatformat:2 }}</p>
+                                <p class="cart-item__price">Unit price: {{ item.product.price|money }}</p>
 
                                 <div class="cart-quantity-controls" aria-label="Quantity controls for {{ item.product.name }}">
                                     <form method="post" action="{% url 'store:decrease_cart_quantity' item.product.pk %}" class="cart-action-form">
@@ -55,7 +56,7 @@
                                     </form>
                                 </div>
 
-                                <p class="cart-item__subtotal">Line total: ${{ item.subtotal|floatformat:2 }}</p>
+                                <p class="cart-item__subtotal">Line total: {{ item.subtotal|money }}</p>
 
                                 <form method="post" action="{% url 'store:remove_from_cart' item.product.pk %}" class="cart-remove-form">
                                     {% csrf_token %}
@@ -70,7 +71,7 @@
                     <h2>Order summary</h2>
                     <div class="cart-summary__meta">
                         <span>{{ cart_items|length }} item{% if cart_items|length != 1 %}s{% endif %}</span>
-                        <span>Total: ${{ total|floatformat:2 }}</span>
+                        <span>Total: {{ total|money }}</span>
                     </div>
                     <a class="button" href="{% url 'store:checkout' %}">Proceed to Checkout</a>
                     <a class="button button--secondary cart-continue-link" href="{% url 'store:product_list' %}">Continue Shopping</a>

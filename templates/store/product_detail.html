@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load store_tags %}
 
 {% block title %}{{ product.name }} | DepalNova{% endblock %}
 
@@ -26,7 +27,7 @@
                 <p class="eyebrow">DepalNova collection / {{ product.category }}</p>
                 <h1 id="product-title">{{ product.name }}</h1>
                 <p class="product-detail__availability">DepalNova marketplace selection</p>
-                <p class="product-detail__price">${{ product.price|floatformat:2 }}</p>
+                <p class="product-detail__price">{{ product.price|money }}</p>
                 <div class="product-description">
                     <h2>Description</h2>
                     <p>{{ product.description }}</p>

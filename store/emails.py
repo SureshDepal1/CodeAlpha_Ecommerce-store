@@ -7,6 +7,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.urls import reverse
 
+from .money import format_money
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ def send_owner_alert(order):
     context = _email_context(order)
     subject = (
         f"New order #{_clean_subject_value(order.pk)} - "
-        f"${_clean_subject_value(order.total_amount)} from "
+        f"{_clean_subject_value(format_money(order.total_amount))} from "
         f"{_clean_subject_value(order.full_name)}"
     )
     text_body = render_to_string("emails/order_owner_alert.txt", context)

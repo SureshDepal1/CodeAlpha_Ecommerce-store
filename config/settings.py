@@ -214,7 +214,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+TIME_ZONE = os.environ.get("DJANGO_TIME_ZONE", "Asia/Karachi").strip() or "Asia/Karachi"
 USE_I18N = True
 USE_TZ = True
 
@@ -264,6 +264,13 @@ RETURN_POLICY_SUMMARY = os.environ.get("RETURN_POLICY_SUMMARY", "").strip()
 DELIVERY_TIME_SUMMARY = os.environ.get("DELIVERY_TIME_SUMMARY", "").strip()
 LEGAL_JURISDICTION = os.environ.get("LEGAL_JURISDICTION", "").strip()
 LEGAL_LAST_UPDATED = os.environ.get("LEGAL_LAST_UPDATED", "2026-09-21").strip()
+STORE_CURRENCY_CODE = os.environ.get("STORE_CURRENCY_CODE", "USD").strip().upper() or "USD"
+STORE_PRICE_FORMAT = os.environ.get("STORE_PRICE_FORMAT", "${amount}").strip() or "${amount}"
+if "{amount}" not in STORE_PRICE_FORMAT:
+    import logging as _logging
+
+    _logging.getLogger("store").warning("STORE_PRICE_FORMAT must contain {amount}; using ${amount}.")
+    STORE_PRICE_FORMAT = "${amount}"
 
 OTP_LENGTH = _env_int("OTP_LENGTH", 6)
 OTP_EXPIRY_SECONDS = _env_int("OTP_EXPIRY_SECONDS", 600)

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load store_tags %}
 
 {% block title %}DepalNova | Discover More. Shop Better.{% endblock %}
 
@@ -44,7 +45,7 @@
                             <p class="product-category">{{ product.category }}</p>
                             <h3><a href="{% url 'store:product_detail' product.pk %}">{{ product.name }}</a></h3>
                             <div class="product-card__footer">
-                                <p class="product-price">${{ product.price|floatformat:2 }}</p>
+                                <p class="product-price">{{ product.price|money }}</p>
                                 {% if product.stock > 0 %}
                                     <span class="stock-dot">In Stock</span>
                                 {% else %}

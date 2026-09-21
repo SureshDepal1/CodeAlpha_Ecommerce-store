@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load store_tags %}
 
 {% block title %}My orders | DepalNova{% endblock %}
 
@@ -24,7 +25,7 @@
                         </div>
                         <div class="order-card__summary">
                             <span>{{ order.item_count }} item{{ order.item_count|pluralize }}</span>
-                            <strong>${{ order.total_amount|floatformat:2 }}</strong>
+                            <strong>{{ order.total_amount|money }}</strong>
                         </div>
                         <a class="button button--secondary" href="{% url 'store:order_detail' order.pk %}">View Details</a>
                     </article>

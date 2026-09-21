@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load store_tags %}
 
 {% block title %}Order #{{ order.pk }} | DepalNova{% endblock %}
 
@@ -57,16 +58,16 @@
                             </div>
                             <div class="order-item__details">
                                 <h3>{{ item.product_name }}</h3>
-                                <p>Price at purchase: ${{ item.price|floatformat:2 }}</p>
+                                <p>Price at purchase: {{ item.price|money }}</p>
                                 <p>Quantity: {{ item.quantity }}</p>
                             </div>
-                            <strong class="order-item__subtotal">${{ item.subtotal|floatformat:2 }}</strong>
+                            <strong class="order-item__subtotal">{{ item.subtotal|money }}</strong>
                         </article>
                     {% endfor %}
                 </div>
                 <div class="order-total-row">
                     <span>Total amount</span>
-                    <strong>${{ order.total_amount|floatformat:2 }}</strong>
+                    <strong>{{ order.total_amount|money }}</strong>
                 </div>
             </section>
         </div>
