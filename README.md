@@ -1,19 +1,19 @@
 # Simple E-commerce Store
 
-A beginner-friendly Django foundation for a simple online store. The project is currently in development and this repository contains Step 7: Basic Shopping Cart using Django sessions.
+A Django online store with catalog browsing, account verification, cart management, Cash on Delivery checkout, and admin order processing.
 
 ## Features
-
-Planned features include:
 
 - Product listings
 - Product details
 - Shopping cart
-- User registration/login
-- Checkout
-- Order processing
-- Order history
+- Registration, email verification, login throttling, and password reset
+- Checkout with server-calculated shipping, tax, and Cash on Delivery payment
+- Order processing, order history, and payment-status admin actions
 - Search and filtering
+- Privacy, terms, and contact pages
+- Configurable currency and timezone
+- Launch-readiness checks
 
 ## Technology
 
@@ -113,25 +113,13 @@ Products are retrieved from the database and only available products are display
 
 Available products can now be viewed individually at `/products/<product_id>/`. Product details are loaded from the database, while nonexistent or unavailable products return a standard 404 response. A responsive product detail layout and automated detail-page tests have been added.
 
-## Step 5 - User Registration
+## Accounts and cart
 
-Django's built-in authentication system now supports user registration at `/register/`. The form collects username, email, password, and password confirmation. Django handles secure password hashing, while built-in validation and automated registration tests protect the flow. Login will be implemented in a later step.
-
-## Step 6 - User Login and Logout
-
-Django's built-in authentication system now supports login at `/login/` and logout at `/logout/`. Django sessions manage authentication state, and built-in form validation and authentication tests cover valid and invalid login attempts. Shopping cart and other future features remain planned.
-
-## Step 7 - Basic Shopping Cart
-
-The cart uses Django sessions to store product IDs and quantities, while the Product table remains the source of truth for pricing, availability, stock, and images. Authenticated users can add available products to the cart, the cart page shows each item's quantity, subtotal, and the total, and the navigation displays the live total item count. Stock validation prevents quantities from exceeding available inventory, and checkout remains planned for a future step.
-
-## Step 8 - Cart Management
-
-Authenticated users can now increase, decrease, update, and remove products from their Django session cart. Quantity updates respect product stock limits, the cart total is recalculated from current database prices, and the cart count stays synchronized with the live session data. Checkout and order processing remain planned for later steps.
+Registration, email verification, login, logout, password reset, login throttling, and session-based cart management are available. Cart quantities and prices are validated against current product inventory.
 
 ## Development Status
 
-Step 8 - Cart management completed. Product database, Django Admin, product listing, product details, registration, login, logout, and session-based cart management are available.
+The core store workflow is implemented. Online card payments are intentionally out of scope until a payment provider and merchant credentials are supplied; Cash on Delivery is the working payment method.
 
 ## Step 10 - Order Processing
 
@@ -180,6 +168,12 @@ Set these variables in the hosting provider's secret/environment settings. Do no
 | `SITE_URL` | The public `https://` URL |
 | `EMAIL_*` | Real SMTP host, user, app password, port, and TLS/SSL settings |
 | `ORDER_NOTIFICATION_EMAILS` | Comma-separated owner addresses |
+| `DJANGO_TIME_ZONE` | Default `Asia/Karachi` |
+| `STORE_CURRENCY_CODE` | Default `USD` |
+| `STORE_PRICE_FORMAT` | Default `${amount}`; examples include `Rs. {amount}` |
+| `SHIPPING_FLAT_RATE` | Default `0.00` |
+| `FREE_SHIPPING_THRESHOLD` | Optional order subtotal threshold |
+| `TAX_RATE_PERCENT` | Default `0` |
 
 First deployment:
 
@@ -196,3 +190,22 @@ SQLite and local media require a persistent disk on the host. `SERVE_MEDIA=True`
 For a multi-process deployment using the database cache, set `DJANGO_CACHE_BACKEND=database` and run `python manage.py createcachetable` once.
 
 If secrets were ever shared, rotate the Gmail App Password immediately. Git history keeps old commits, so make the repository private and consider removing exposed history through your repository provider's documented secret-removal process.
+
+## Launch checklist
+
+Run the read-only readiness report before launch:
+
+```powershell
+venv\Scripts\python.exe manage.py check_launch_readiness --strict
+```
+
+The command checks production settings, SMTP, collected static files, media storage, migrations, admin access, catalog data, orders, user emails, store contact details, cache configuration, and git hygiene. Add `--send-test` only when you want it to send one real email to the configured owner recipient or SMTP user.
+
+Before launch:
+
+1. Create a new Gmail App Password and remove any old credential that was shared outside the project. Set it only in `.env`.
+2. Set the store contact details and, if applicable, return, delivery, currency, shipping, and tax settings in `.env`.
+3. Review product names and categories in Admin, add real products and photos, and remove test orders.
+4. Keep the repository private and arrange removal of any exposed database backup from git history.
+5. Have the Privacy and Terms pages reviewed by a qualified person.
+6. Choose a host, complete the deployment settings above, and run the strict readiness command.
