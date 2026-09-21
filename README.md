@@ -61,6 +61,12 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+For development-only image downloads, install the optional tools too:
+
+```powershell
+pip install -r requirements-dev.txt
+```
+
 To regenerate the requirements file after installing packages:
 
 ```powershell
@@ -154,3 +160,36 @@ venv\Scripts\python.exe manage.py purge_unverified_users
 ```
 
 With the development console email backend, the verification code is printed in the terminal running `runserver`. Configure the SMTP values in `.env` before using a real inbox.
+
+## Deploying
+
+Set these variables in the hosting provider's secret/environment settings. Do not commit `.env` or real credentials.
+
+| Variable | Production value |
+| --- | --- |
+| `DJANGO_DEBUG` | `False` |
+| `DJANGO_SECRET_KEY` | A generated key of at least 50 characters |
+| `DJANGO_ALLOWED_HOSTS` | Comma-separated public hostnames |
+| `DJANGO_SECURE_DEPLOYMENT` | `True` when HTTPS security headers are wanted |
+| `DJANGO_BEHIND_PROXY` | `True` only when a trusted TLS proxy sets `X-Forwarded-Proto` |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | Comma-separated `https://` origins |
+| `DJANGO_SSL_REDIRECT` | Usually `True`; set `False` when the proxy handles redirects |
+| `SERVE_MEDIA` | `True` only for a small store on a persistent disk |
+| `DATABASE_URL` | Optional `postgresql://...`; SQLite remains the default |
+| `SITE_URL` | The public `https://` URL |
+| `EMAIL_*` | Real SMTP host, user, app password, port, and TLS/SSL settings |
+| `ORDER_NOTIFICATION_EMAILS` | Comma-separated owner addresses |
+
+First deployment:
+
+```powershell
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py createsuperuser
+python manage.py check --deploy
+```
+
+SQLite and local media require a persistent disk on the host. `SERVE_MEDIA=True` is suitable for a small store with persistent storage; object storage or nginx is better at scale. PostgreSQL is supported through `DATABASE_URL` for hosts with ephemeral disks.
+
+If secrets were ever shared, rotate the Gmail App Password immediately. Git history keeps old commits, so make the repository private and consider removing exposed history through your repository provider's documented secret-removal process.

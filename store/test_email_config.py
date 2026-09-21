@@ -11,8 +11,7 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from config.settings import _email_transport, _normalize_password, load_dotenv
-import config.settings as project_settings
+from config.settings import _email_transport, _normalize_password, email_settings, load_dotenv
 from django.contrib.auth import get_user_model
 
 from .models import Product
@@ -40,8 +39,24 @@ class DotEnvLoaderTests(TestCase):
         self.assertEqual(_normalize_password(" ab cd\t ef "), "abcdef")
 
     def test_placeholders_use_console_mode(self):
-        self.assertFalse(project_settings.EMAIL_CONFIGURED)
-        self.assertEqual(project_settings.EMAIL_BACKEND, "django.core.mail.backends.console.EmailBackend")
+        placeholder_settings = email_settings(
+            {
+                "EMAIL_HOST_USER": "your-email@gmail.com",
+                "EMAIL_HOST_PASSWORD": "PASTE_APP_PASSWORD_HERE",
+            }
+        )
+        self.assertFalse(placeholder_settings["EMAIL_CONFIGURED"])
+        self.assertEqual(placeholder_settings["EMAIL_BACKEND"], "django.core.mail.backends.console.EmailBackend")
+
+    def test_real_values_use_smtp_mode(self):
+        configured = email_settings(
+            {
+                "EMAIL_HOST_USER": "sender@example.test",
+                "EMAIL_HOST_PASSWORD": "fake-app-password",
+            }
+        )
+        self.assertTrue(configured["EMAIL_CONFIGURED"])
+        self.assertEqual(configured["EMAIL_BACKEND"], "django.core.mail.backends.smtp.EmailBackend")
 
     def test_ssl_and_tls_are_never_enabled_together(self):
         with patch.dict(os.environ, {"EMAIL_USE_SSL": "True", "EMAIL_USE_TLS": "True", "EMAIL_PORT": "465"}, clear=False):

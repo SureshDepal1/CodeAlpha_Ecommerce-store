@@ -7,7 +7,6 @@ import time
 from decimal import Decimal
 from pathlib import Path
 
-import requests
 from PIL import Image, ImageDraw, ImageFont
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -240,6 +239,8 @@ def explain_missing_api_keys():
 
 
 def fetch_from_unsplash(query):
+    import requests
+
     key = os.environ.get("UNSPLASH_ACCESS_KEY")
     if not key:
         return None
@@ -260,6 +261,8 @@ def fetch_from_unsplash(query):
 
 
 def fetch_from_pexels(query):
+    import requests
+
     key = os.environ.get("PEXELS_API_KEY")
     if not key:
         return None
@@ -280,6 +283,8 @@ def fetch_from_pexels(query):
 
 
 def fetch_from_pixabay(query):
+    import requests
+
     key = os.environ.get("PIXABAY_API_KEY")
     if not key:
         return None
@@ -299,6 +304,11 @@ def fetch_from_pixabay(query):
 
 
 def download_remote_image(product_name):
+    try:
+        import requests
+    except ImportError as exc:
+        raise RuntimeError("Remote image downloads require requests. Run: pip install -r requirements-dev.txt") from exc
+
     query = product_name
     for source_name, fetcher in (
         ("Unsplash", fetch_from_unsplash),

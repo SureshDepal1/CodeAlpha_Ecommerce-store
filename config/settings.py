@@ -1,10 +1,14 @@
 """Django settings for the Simple E-commerce Store project."""
 
 import os
+from urllib.parse import parse_qs, unquote, urlparse
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+DEVELOPMENT_SECRET_KEY = "development-only-key-change-in-production-use-an-environment-secret"
 
 
 def load_dotenv(path):
@@ -27,11 +31,12 @@ def load_dotenv(path):
             os.environ.setdefault(key, value)
 
 
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(os.environ.get("DJANGO_DOTENV_PATH", BASE_DIR / ".env"))
 
 
-def _env_bool(name, default=False):
-    return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+def _env_bool(name, default=False, environ=None):
+    environ = os.environ if environ is None else environ
+    return str(environ.get(name, default)).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _is_placeholder(value):
@@ -43,9 +48,10 @@ def _is_placeholder(value):
     }
 
 
-def _env_int(name, default):
+def _env_int(name, default, environ=None):
+    environ = os.environ if environ is None else environ
     try:
-        return int(os.environ.get(name, str(default)).strip())
+        return int(str(environ.get(name, default)).strip())
     except (TypeError, ValueError):
         return default
 
@@ -54,20 +60,82 @@ def _normalize_password(value):
     return "".join(value.split())
 
 
-def _email_transport():
-    use_ssl = _env_bool("EMAIL_USE_SSL", False)
-    use_tls = _env_bool("EMAIL_USE_TLS", not use_ssl)
+def _email_transport(environ=None):
+    environ = os.environ if environ is None else environ
+    use_ssl = _env_bool("EMAIL_USE_SSL", False, environ)
+    use_tls = _env_bool("EMAIL_USE_TLS", not use_ssl, environ)
     if use_ssl:
         use_tls = False
-    port = _env_int("EMAIL_PORT", 465 if use_ssl else 587)
+    port = _env_int("EMAIL_PORT", 465 if use_ssl else 587, environ)
     return use_ssl, use_tls, port
 
 
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "development-only-key-change-in-production-use-an-environment-secret",
-)
+def email_settings(environ=None):
+    environ = os.environ if environ is None else environ
+    host_user = environ.get("EMAIL_HOST_USER", "").strip()
+    host_password = _normalize_password(environ.get("EMAIL_HOST_PASSWORD", ""))
+    use_ssl, use_tls, port = _email_transport(environ)
+    configured = bool(host_user and host_password and not _is_placeholder(host_user) and not _is_placeholder(host_password))
+    return {
+        "EMAIL_HOST_USER": host_user,
+        "EMAIL_HOST_PASSWORD": host_password,
+        "EMAIL_USE_SSL": use_ssl,
+        "EMAIL_USE_TLS": use_tls,
+        "EMAIL_PORT": port,
+        "EMAIL_HOST": environ.get("EMAIL_HOST", "smtp.gmail.com"),
+        "EMAIL_CONFIGURED": configured,
+        "EMAIL_BACKEND": "django.core.mail.backends.smtp.EmailBackend" if configured else "django.core.mail.backends.console.EmailBackend",
+    }
+
+
+def resolve_secret_key(debug, environ=None):
+    environ = os.environ if environ is None else environ
+    value = environ.get("DJANGO_SECRET_KEY", DEVELOPMENT_SECRET_KEY)
+    if not debug and (not value or len(value) < 50 or value == DEVELOPMENT_SECRET_KEY or value.startswith("django-insecure-")):
+        raise ImproperlyConfigured(
+            'Production requires DJANGO_SECRET_KEY with at least 50 characters that is not a development key. '
+            'Generate one with: python -c "from django.core.management.utils import get_random_secret_key as g; print(g())"'
+        )
+    return value
+
+
+def _csv_values(name, environ=None):
+    environ = os.environ if environ is None else environ
+    return [value.strip() for value in environ.get(name, "").split(",") if value.strip()]
+
+
+def parse_proxy_settings(environ=None):
+    return ("HTTP_X_FORWARDED_PROTO", "https") if _env_bool("DJANGO_BEHIND_PROXY", False, environ) else None
+
+
+def parse_csrf_trusted_origins(environ=None):
+    return _csv_values("DJANGO_CSRF_TRUSTED_ORIGINS", environ)
+
+
+def parse_database_url(url):
+    parsed = urlparse(url)
+    if parsed.scheme not in {"postgres", "postgresql"} or not parsed.hostname:
+        raise ImproperlyConfigured("DATABASE_URL must use postgres:// or postgresql:// and include a hostname.")
+    options = {}
+    query = parse_qs(parsed.query)
+    if query.get("sslmode"):
+        options["sslmode"] = query["sslmode"][0]
+    config = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": unquote(parsed.path.lstrip("/")),
+        "USER": unquote(parsed.username or ""),
+        "PASSWORD": unquote(parsed.password or ""),
+        "HOST": parsed.hostname,
+        "PORT": str(parsed.port or "5432"),
+        "CONN_MAX_AGE": 60,
+    }
+    if options:
+        config["OPTIONS"] = options
+    return config
+
+
 DEBUG = _env_bool("DJANGO_DEBUG", True)
+SECRET_KEY = resolve_secret_key(DEBUG)
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
@@ -88,6 +156,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -118,10 +187,13 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-DATABASES = {
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+DATABASES = {"default": parse_database_url(DATABASE_URL)} if DATABASE_URL else {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        "OPTIONS": {"transaction_mode": "IMMEDIATE", "timeout": 20},
+        "CONN_MAX_AGE": 60,
     }
 }
 
@@ -147,24 +219,27 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "").strip()
-EMAIL_HOST_PASSWORD = _normalize_password(os.environ.get("EMAIL_HOST_PASSWORD", ""))
-EMAIL_USE_SSL, EMAIL_USE_TLS, EMAIL_PORT = _email_transport()
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_CONFIGURED = bool(
-    EMAIL_HOST_USER
-    and EMAIL_HOST_PASSWORD
-    and not _is_placeholder(EMAIL_HOST_USER)
-    and not _is_placeholder(EMAIL_HOST_PASSWORD)
-)
+_EMAIL_SETTINGS = email_settings()
+EMAIL_HOST_USER = _EMAIL_SETTINGS["EMAIL_HOST_USER"]
+EMAIL_HOST_PASSWORD = _EMAIL_SETTINGS["EMAIL_HOST_PASSWORD"]
+EMAIL_USE_SSL = _EMAIL_SETTINGS["EMAIL_USE_SSL"]
+EMAIL_USE_TLS = _EMAIL_SETTINGS["EMAIL_USE_TLS"]
+EMAIL_PORT = _EMAIL_SETTINGS["EMAIL_PORT"]
+EMAIL_HOST = _EMAIL_SETTINGS["EMAIL_HOST"]
+EMAIL_CONFIGURED = _EMAIL_SETTINGS["EMAIL_CONFIGURED"]
 if EMAIL_CONFIGURED:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_BACKEND = _EMAIL_SETTINGS["EMAIL_BACKEND"]
     EMAIL_TIMEOUT = 10
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
@@ -179,6 +254,7 @@ ORDER_NOTIFICATION_EMAILS = [
     if email.strip()
 ]
 SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
+SERVE_MEDIA = _env_bool("SERVE_MEDIA", DEBUG)
 
 OTP_LENGTH = _env_int("OTP_LENGTH", 6)
 OTP_EXPIRY_SECONDS = _env_int("OTP_EXPIRY_SECONDS", 600)
@@ -230,7 +306,9 @@ SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = not DEBUG
-SECURE_SSL_REDIRECT = not DEBUG
+SECURE_SSL_REDIRECT = _env_bool("DJANGO_SSL_REDIRECT", not DEBUG)
+SECURE_PROXY_SSL_HEADER = parse_proxy_settings()
+CSRF_TRUSTED_ORIGINS = parse_csrf_trusted_origins()
 SECURE_HSTS_SECONDS = 31536000 if SECURE_DEPLOYMENT else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_DEPLOYMENT
 SECURE_HSTS_PRELOAD = SECURE_DEPLOYMENT
