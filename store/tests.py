@@ -286,6 +286,25 @@ class ProductListingTests(TestCase):
 
         self.assertContains(response, "q=Paged&amp;category=General&amp;sort=name_az&amp;page=1")
 
+    def test_product_listing_regression_loads_empty_filtered_and_paginated_requests(self):
+        self.assertEqual(self.client.get(reverse("store:product_list")).status_code, 200)
+
+        for index in range(25):
+            self.create_filter_product(
+                f"Regression Product {index}",
+                "Regression description",
+                "Regression",
+                "25.00",
+            )
+
+        filtered_response = self.client.get(
+            reverse("store:product_list"),
+            {"q": "Regression", "category": "Regression", "page": 2},
+        )
+        self.assertEqual(filtered_response.status_code, 200)
+        self.assertEqual(filtered_response.context["page_obj"].number, 2)
+        self.assertEqual(filtered_response.context["result_count"], 25)
+
 
 class ProductDetailTests(TestCase):
     def create_product(self, **overrides):

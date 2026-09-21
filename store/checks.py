@@ -12,7 +12,7 @@ PLACEHOLDERS = {
 }
 
 
-@register("deploy")
+@register("deploy", deploy=True)
 def deployment_checks(app_configs, **kwargs):
     if settings.DEBUG:
         return []

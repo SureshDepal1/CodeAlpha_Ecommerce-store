@@ -5,6 +5,7 @@ from unittest.mock import patch
 from django.core import checks
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
+from django.core.management.base import SystemCheckError
 from django.test import SimpleTestCase, override_settings
 
 from config.settings import (
@@ -47,6 +48,36 @@ class SettingsHelperTests(SimpleTestCase):
 
 
 class DeploymentCheckTests(SimpleTestCase):
+    @override_settings(
+        DEBUG=False,
+        EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend",
+        EMAIL_HOST_USER="your-email@gmail.com",
+        EMAIL_HOST_PASSWORD="PASTE_APP_PASSWORD_HERE",
+    )
+    def test_production_checks_only_run_with_deploy_flag(self):
+        normal_output = tempfile.TemporaryFile(mode="w+")
+        call_command("check", stdout=normal_output)
+        normal_output.seek(0)
+        self.assertNotIn("store.E001", normal_output.read())
+
+        normal_ids = {
+            message.id
+            for message in checks.run_checks(include_deployment_checks=False)
+            if message.id == "store.E001"
+        }
+        deploy_ids = {
+            message.id
+            for message in checks.run_checks(include_deployment_checks=True)
+            if message.id == "store.E001"
+        }
+        self.assertEqual(normal_ids, set())
+        self.assertEqual(deploy_ids, {"store.E001"})
+
+        deploy_output = tempfile.TemporaryFile(mode="w+")
+        with self.assertRaises(SystemCheckError):
+            call_command("check", deploy=True, stdout=deploy_output)
+        deploy_output.seek(0)
+
     @override_settings(
         DEBUG=False,
         EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend",

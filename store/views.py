@@ -354,7 +354,6 @@ def product_list(request):
             category_label = category.strip()
             category_labels.setdefault(category_label.casefold(), category_label)
     categories = sorted(category_labels.values(), key=str.casefold)
-    totals = calculate_totals(total)
     return render(
         request,
         "store/product_list.html",
