@@ -267,6 +267,15 @@ OTP_MAX_REGISTRATIONS_PER_IP_PER_HOUR = _env_int("OTP_MAX_REGISTRATIONS_PER_IP_P
 PASSWORD_RESET_TIMEOUT = 3600
 PASSWORD_RESET_EMAIL_LIMIT = 3
 PASSWORD_RESET_IP_LIMIT = 5
+LOGIN_MAX_FAILED_PER_USER_IP = _env_int("LOGIN_MAX_FAILED_PER_USER_IP", 5)
+LOGIN_MAX_FAILED_PER_IP = _env_int("LOGIN_MAX_FAILED_PER_IP", 20)
+LOGIN_LOCKOUT_SECONDS = _env_int("LOGIN_LOCKOUT_SECONDS", 900)
+
+CACHE_BACKEND = os.environ.get("DJANGO_CACHE_BACKEND", "locmem").strip().lower()
+if CACHE_BACKEND == "database":
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.db.DatabaseCache", "LOCATION": "django_cache"}}
+else:
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "depalnova-cache"}}
 
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)

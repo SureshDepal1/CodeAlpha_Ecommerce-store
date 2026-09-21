@@ -176,6 +176,7 @@ Set these variables in the hosting provider's secret/environment settings. Do no
 | `DJANGO_SSL_REDIRECT` | Usually `True`; set `False` when the proxy handles redirects |
 | `SERVE_MEDIA` | `True` only for a small store on a persistent disk |
 | `DATABASE_URL` | Optional `postgresql://...`; SQLite remains the default |
+| `DJANGO_CACHE_BACKEND` | `locmem` by default; use `database` for multiple processes |
 | `SITE_URL` | The public `https://` URL |
 | `EMAIL_*` | Real SMTP host, user, app password, port, and TLS/SSL settings |
 | `ORDER_NOTIFICATION_EMAILS` | Comma-separated owner addresses |
@@ -191,5 +192,7 @@ python manage.py check --deploy
 ```
 
 SQLite and local media require a persistent disk on the host. `SERVE_MEDIA=True` is suitable for a small store with persistent storage; object storage or nginx is better at scale. PostgreSQL is supported through `DATABASE_URL` for hosts with ephemeral disks.
+
+For a multi-process deployment using the database cache, set `DJANGO_CACHE_BACKEND=database` and run `python manage.py createcachetable` once.
 
 If secrets were ever shared, rotate the Gmail App Password immediately. Git history keeps old commits, so make the repository private and consider removing exposed history through your repository provider's documented secret-removal process.

@@ -20,7 +20,13 @@ from django.views.decorators.http import require_POST
 from .forms import CheckoutForm, LoginForm, RegistrationForm
 from .emails import send_order_emails, send_verification_code
 from .models import EmailVerification, Order, OrderItem, Product
-from .throttle import registration_throttled, throttle_key
+from .throttle import (
+    login_blocked,
+    record_login_failure,
+    registration_throttled,
+    reset_login_user,
+    throttle_key,
+)
 
 
 PENDING_VERIFICATION_SESSION_KEY = "pending_verification_user_id"
@@ -686,14 +692,27 @@ def login_view(request):
         return redirect("store:home")
 
     if request.method == "POST":
+        username = request.POST.get("username", "").strip()
+        blocked, minutes = login_blocked(
+            request,
+            username,
+            settings.LOGIN_MAX_FAILED_PER_USER_IP,
+            settings.LOGIN_MAX_FAILED_PER_IP,
+            settings.LOGIN_LOCKOUT_SECONDS,
+        )
+        if blocked:
+            form = LoginForm(request=request, data=request.POST)
+            form.add_error(None, f"Too many login attempts. Please try again in {minutes} minutes.")
+            return render(request, "store/login.html", {"form": form}, status=429)
         form = LoginForm(request=request, data=request.POST)
         if form.is_valid():
+            reset_login_user(request, username)
             login(request, form.get_user())
             return redirect("store:home")
-        username = request.POST.get("username", "").strip()
         password = request.POST.get("password", "")
         pending_user = _pending_users().filter(username=username).select_related("email_verification").first()
         if pending_user and check_password(password, pending_user.password):
+            reset_login_user(request, username)
             request.session[PENDING_VERIFICATION_SESSION_KEY] = pending_user.pk
             try:
                 result = _send_new_verification_code(pending_user, pending_user.email_verification)
@@ -707,6 +726,13 @@ def login_view(request):
                 else:
                     messages.error(request, "You have reached the resend limit. Please register again.")
             return redirect("store:verify_email")
+        record_login_failure(
+            request,
+            username,
+            settings.LOGIN_MAX_FAILED_PER_USER_IP,
+            settings.LOGIN_MAX_FAILED_PER_IP,
+            settings.LOGIN_LOCKOUT_SECONDS,
+        )
     else:
         form = LoginForm(request=request)
 

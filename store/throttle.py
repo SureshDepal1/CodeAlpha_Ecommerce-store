@@ -1,5 +1,7 @@
 import hashlib
 import logging
+import math
+import time
 
 from django.core.cache import cache
 
@@ -52,3 +54,43 @@ def login_counter_key(username, request):
 
 def login_ip_key(request):
     return throttle_key("login-ip", request_ip(request))
+
+
+def _login_state(key):
+    state = cache.get(key)
+    if not isinstance(state, dict):
+        return {"count": 0, "blocked_until": 0}
+    return state
+
+
+def login_blocked(request, username, user_limit, ip_limit, lockout_seconds):
+    try:
+        now = time.time()
+        states = (_login_state(login_counter_key(username, request)), _login_state(login_ip_key(request)))
+        blocked_until = max(state["blocked_until"] for state in states)
+        if blocked_until > now:
+            return True, max(1, math.ceil((blocked_until - now) / 60))
+        return False, 0
+    except Exception:
+        logger.warning("Login throttle cache unavailable; allowing request.", exc_info=True)
+        return False, 0
+
+
+def record_login_failure(request, username, user_limit, ip_limit, lockout_seconds):
+    try:
+        now = time.time()
+        for key, limit in (
+            (login_counter_key(username, request), user_limit),
+            (login_ip_key(request), ip_limit),
+        ):
+            state = _login_state(key)
+            state["count"] += 1
+            if state["count"] >= limit:
+                state["blocked_until"] = now + lockout_seconds
+            cache.set(key, state, lockout_seconds)
+    except Exception:
+        logger.warning("Login throttle cache unavailable; allowing request.", exc_info=True)
+
+
+def reset_login_user(request, username):
+    reset(login_counter_key(username, request))
