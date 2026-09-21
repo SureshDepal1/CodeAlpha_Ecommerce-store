@@ -1,4 +1,3 @@
-import hashlib
 import secrets
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
@@ -21,6 +20,7 @@ from django.views.decorators.http import require_POST
 from .forms import CheckoutForm, LoginForm, RegistrationForm
 from .emails import send_order_emails, send_verification_code
 from .models import EmailVerification, Order, OrderItem, Product
+from .throttle import registration_throttled, throttle_key
 
 
 PENDING_VERIFICATION_SESSION_KEY = "pending_verification_user_id"
@@ -65,28 +65,16 @@ def _mask_email(email):
 
 
 def _throttle_key(prefix, value):
-    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
-    return f"otp:{prefix}:{digest}"
+    return throttle_key(prefix, value)
 
 
 def _registration_throttled(request, email):
-    address_key = _throttle_key("email", email)
-    ip_key = _throttle_key("ip", request.META.get("REMOTE_ADDR", "unknown"))
-    window = 3600
-    for key, limit in (
-        (address_key, settings.OTP_MAX_EMAILS_PER_ADDRESS_PER_HOUR),
-        (ip_key, settings.OTP_MAX_REGISTRATIONS_PER_IP_PER_HOUR),
-    ):
-        if cache.add(key, 1, window):
-            continue
-        try:
-            count = cache.incr(key)
-        except ValueError:
-            cache.set(key, 1, window)
-            count = 1
-        if count > limit:
-            return True
-    return False
+    return registration_throttled(
+        request,
+        email,
+        settings.OTP_MAX_EMAILS_PER_ADDRESS_PER_HOUR,
+        settings.OTP_MAX_REGISTRATIONS_PER_IP_PER_HOUR,
+    )
 
 
 def _send_new_verification_code(user, verification):

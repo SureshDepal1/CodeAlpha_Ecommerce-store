@@ -1,7 +1,11 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.models import User
+from django.conf import settings
 from django.db.models import Q
+
+from .throttle import password_reset_throttled
 
 
 class RegistrationForm(UserCreationForm):
@@ -90,3 +94,20 @@ class CheckoutForm(forms.Form):
         max_length=100,
         widget=forms.TextInput(attrs={"autocomplete": "country-name", "placeholder": "Country"}),
     )
+
+
+class StorePasswordResetForm(PasswordResetForm):
+    def __init__(self, *args, request=None, **kwargs):
+        self.request = request
+        super().__init__(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        email = self.cleaned_data.get("email", "").strip().lower()
+        if self.request is not None and password_reset_throttled(
+            self.request,
+            email,
+            settings.PASSWORD_RESET_EMAIL_LIMIT,
+            settings.PASSWORD_RESET_IP_LIMIT,
+        ):
+            return
+        return super().save(*args, **kwargs)

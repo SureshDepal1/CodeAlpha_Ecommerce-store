@@ -33,6 +33,8 @@
         </form>
 
         <p class="registration-links">
+            <a href="{% url 'store:password_reset' %}">Forgot your password?</a>
+            <span aria-hidden="true">|</span>
             <a href="{% url 'store:register' %}">Create an account</a>
             <span aria-hidden="true">|</span>
             <a href="{% url 'store:home' %}">Home</a>
