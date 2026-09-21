@@ -6,12 +6,13 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.hashers import check_password
 from django.conf import settings
 from django.core.management import call_command
+from django.core import mail
 from django.db import DatabaseError
 from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from .management.commands import seed_demo_products
-from .models import Order, OrderItem, Product
+from .models import EmailVerification, Order, OrderItem, Product
 from .views import custom_500
 
 
@@ -430,10 +431,14 @@ class RegistrationTests(TestCase):
 
         user = User.objects.get(username="newshopper")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.redirect_chain, [(reverse("store:home"), 302)])
-        self.assertContains(response, "Account created successfully.")
+        self.assertEqual(response.redirect_chain, [(reverse("store:verify_email"), 302)])
+        self.assertContains(response, "Verify your email")
+        self.assertFalse(user.is_active)
         self.assertNotEqual(user.password, self.valid_registration_data["password1"])
         self.assertTrue(check_password(self.valid_registration_data["password1"], user.password))
+        self.assertEqual(EmailVerification.objects.filter(user=user).count(), 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertRegex(mail.outbox[0].body, r"\b\d{6}\b")
 
     def test_duplicate_username_is_rejected(self):
         User.objects.create_user(username="newshopper", password="ExistingPassword123!")

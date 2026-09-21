@@ -1,18 +1,110 @@
+import hashlib
+import secrets
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth import login, logout
+from django.contrib.auth.hashers import check_password
+from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import DatabaseError, transaction
-from django.db.models import Count
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.utils.crypto import constant_time_compare, salted_hmac
 from django.views.decorators.http import require_POST
 
 from .forms import CheckoutForm, LoginForm, RegistrationForm
-from .emails import send_order_emails
-from .models import Order, OrderItem, Product
+from .emails import send_order_emails, send_verification_code
+from .models import EmailVerification, Order, OrderItem, Product
+
+
+PENDING_VERIFICATION_SESSION_KEY = "pending_verification_user_id"
+
+
+def _pending_users():
+    return User.objects.filter(
+        is_active=False,
+        email_verification__isnull=False,
+        email_verification__verified_at__isnull=True,
+    )
+
+
+def _purge_expired_unverified_users(minutes=None):
+    lifetime = minutes if minutes is not None else settings.UNVERIFIED_ACCOUNT_LIFETIME_MINUTES
+    cutoff = timezone.now() - timedelta(minutes=lifetime)
+    users = _pending_users().filter(
+        email_verification__created_at__lt=cutoff,
+        orders__isnull=True,
+        is_staff=False,
+        is_superuser=False,
+    ).distinct()
+    count, _ = users.delete()
+    return count
+
+
+def _new_verification_code():
+    return f"{secrets.randbelow(10 ** settings.OTP_LENGTH):0{settings.OTP_LENGTH}d}"
+
+
+def _verification_hash(user, code):
+    return salted_hmac(
+        "email-verification",
+        code,
+        secret=f"{settings.SECRET_KEY}:{user.pk}",
+    ).hexdigest()
+
+
+def _mask_email(email):
+    local, domain = email.split("@", 1)
+    return f"{local[:1]}***@{domain}"
+
+
+def _throttle_key(prefix, value):
+    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
+    return f"otp:{prefix}:{digest}"
+
+
+def _registration_throttled(request, email):
+    address_key = _throttle_key("email", email)
+    ip_key = _throttle_key("ip", request.META.get("REMOTE_ADDR", "unknown"))
+    window = 3600
+    for key, limit in (
+        (address_key, settings.OTP_MAX_EMAILS_PER_ADDRESS_PER_HOUR),
+        (ip_key, settings.OTP_MAX_REGISTRATIONS_PER_IP_PER_HOUR),
+    ):
+        if cache.add(key, 1, window):
+            continue
+        try:
+            count = cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, window)
+            count = 1
+        if count > limit:
+            return True
+    return False
+
+
+def _send_new_verification_code(user, verification):
+    now = timezone.now()
+    if verification.code_sent_at + timedelta(seconds=settings.OTP_RESEND_COOLDOWN_SECONDS) > now:
+        return "cooldown"
+    if verification.send_count >= settings.OTP_MAX_SENDS:
+        return "max"
+
+    code = _new_verification_code()
+    send_verification_code(user, code)
+    verification.code_hash = _verification_hash(user, code)
+    verification.code_sent_at = now
+    verification.expires_at = now + timedelta(seconds=settings.OTP_EXPIRY_SECONDS)
+    verification.attempts = 0
+    verification.send_count += 1
+    verification.save(update_fields=("code_hash", "code_sent_at", "expires_at", "attempts", "send_count"))
+    return "sent"
 
 
 def _create_order_from_cart(user, form, session):
@@ -494,16 +586,111 @@ def register(request):
     if request.user.is_authenticated:
         return redirect("store:home")
 
+    _purge_expired_unverified_users()
     if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Account created successfully.")
-            return redirect("store:home")
+            email = form.cleaned_data["email"]
+            if _registration_throttled(request, email):
+                form.add_error(None, "Too many attempts, please try again later.")
+            else:
+                try:
+                    with transaction.atomic():
+                        user = form.save(commit=False)
+                        user.email = email
+                        user.is_active = False
+                        user.save()
+                        code = _new_verification_code()
+                        now = timezone.now()
+                        verification = EmailVerification.objects.create(
+                            user=user,
+                            code_hash=_verification_hash(user, code),
+                            code_sent_at=now,
+                            expires_at=now + timedelta(seconds=settings.OTP_EXPIRY_SECONDS),
+                        )
+                        send_verification_code(user, code)
+                except Exception:
+                    form.add_error(None, "We couldn't send the verification email. Please check the address and try again.")
+                else:
+                    request.session[PENDING_VERIFICATION_SESSION_KEY] = user.pk
+                    return redirect("store:verify_email")
     else:
         form = RegistrationForm()
 
     return render(request, "store/register.html", {"form": form})
+
+
+def verify_email(request):
+    user_id = request.session.get(PENDING_VERIFICATION_SESSION_KEY)
+    user = _pending_users().filter(pk=user_id).select_related("email_verification").first()
+    if user is None:
+        messages.info(request, "Please start registration again to verify your email.")
+        return redirect("store:register")
+
+    verification = user.email_verification
+    if request.method == "POST":
+        action = request.POST.get("action", "verify")
+        if action == "resend":
+            try:
+                result = _send_new_verification_code(user, verification)
+            except Exception:
+                messages.error(request, "We couldn't send the verification email. Please try again later.")
+            else:
+                if result == "sent":
+                    messages.success(request, "A new code has been sent.")
+                elif result == "cooldown":
+                    messages.error(request, "Please wait before requesting another code.")
+                else:
+                    messages.error(request, "You have reached the resend limit. Please register again.")
+            return redirect("store:verify_email")
+
+        code = request.POST.get("code", "").strip()
+        if not code.isdigit() or len(code) != settings.OTP_LENGTH:
+            messages.error(request, f"Enter the {settings.OTP_LENGTH}-digit code.")
+        elif verification.expires_at <= timezone.now():
+            messages.error(request, "This code has expired. Request a new one.")
+        elif verification.attempts >= settings.OTP_MAX_ATTEMPTS:
+            messages.error(request, "Too many incorrect attempts. Request a new code.")
+        elif not constant_time_compare(verification.code_hash, _verification_hash(user, code)):
+            verification.attempts += 1
+            verification.save(update_fields=("attempts",))
+            remaining = settings.OTP_MAX_ATTEMPTS - verification.attempts
+            if remaining <= 0:
+                messages.error(request, "Too many incorrect attempts. Request a new code.")
+            else:
+                messages.error(request, f"Incorrect code. {remaining} attempts left.")
+        else:
+            with transaction.atomic():
+                user = User.objects.select_for_update().get(pk=user.pk)
+                verification = EmailVerification.objects.select_for_update().get(user=user)
+                User.objects.filter(
+                    email__iexact=user.email,
+                    is_active=False,
+                    email_verification__isnull=False,
+                    email_verification__verified_at__isnull=True,
+                ).exclude(pk=user.pk).delete()
+                user.is_active = True
+                user.save(update_fields=("is_active",))
+                verification.verified_at = timezone.now()
+                verification.code_hash = ""
+                verification.save(update_fields=("verified_at", "code_hash"))
+            request.session.pop(PENDING_VERIFICATION_SESSION_KEY, None)
+            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+            messages.success(request, "Account created successfully.")
+            return redirect("store:home")
+
+    now = timezone.now()
+    resend_at = verification.code_sent_at + timedelta(seconds=settings.OTP_RESEND_COOLDOWN_SECONDS)
+    seconds_until_resend = max(0, int((resend_at - now).total_seconds()))
+    return render(
+        request,
+        "store/verify_email.html",
+        {
+            "masked_email": _mask_email(user.email),
+            "seconds_until_resend": seconds_until_resend,
+            "dev_console_hint": settings.DEBUG and settings.EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend",
+        },
+    )
 
 
 def login_view(request):
@@ -515,6 +702,23 @@ def login_view(request):
         if form.is_valid():
             login(request, form.get_user())
             return redirect("store:home")
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "")
+        pending_user = _pending_users().filter(username=username).select_related("email_verification").first()
+        if pending_user and check_password(password, pending_user.password):
+            request.session[PENDING_VERIFICATION_SESSION_KEY] = pending_user.pk
+            try:
+                result = _send_new_verification_code(pending_user, pending_user.email_verification)
+            except Exception:
+                messages.error(request, "We couldn't send the verification email. Please try again later.")
+            else:
+                if result == "sent":
+                    messages.info(request, "A new verification code has been sent.")
+                elif result == "cooldown":
+                    messages.info(request, "Your verification code is still valid. Please check your email.")
+                else:
+                    messages.error(request, "You have reached the resend limit. Please register again.")
+            return redirect("store:verify_email")
     else:
         form = LoginForm(request=request)
 

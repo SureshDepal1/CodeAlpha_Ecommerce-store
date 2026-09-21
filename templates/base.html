@@ -79,7 +79,7 @@
     {% if messages %}
         <div class="site-messages container" aria-live="polite">
             {% for message in messages %}
-                <p class="site-message site-message--{{ message.tags }}">{{ message }}</p>
+                <p class="site-message site-message--{{ message.tags }}" role="alert">{{ message }}</p>
             {% endfor %}
         </div>
     {% endif %}
@@ -144,6 +144,7 @@
         </div>
     </footer>
 
+    {% block extra_scripts %}{% endblock %}
     <script src="{% static 'js/main.js' %}"></script>
 </body>
 </html>

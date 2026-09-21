@@ -63,3 +63,17 @@ class OrderItem(models.Model):
 
 	def __str__(self):
 		return f"{self.product_name} x {self.quantity}"
+
+
+class EmailVerification(models.Model):
+	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="email_verification")
+	code_hash = models.CharField(max_length=128)
+	created_at = models.DateTimeField(auto_now_add=True)
+	code_sent_at = models.DateTimeField()
+	expires_at = models.DateTimeField()
+	attempts = models.PositiveSmallIntegerField(default=0)
+	send_count = models.PositiveSmallIntegerField(default=1)
+	verified_at = models.DateTimeField(null=True, blank=True)
+
+	def __str__(self):
+		return f"Email verification for {self.user.username}"

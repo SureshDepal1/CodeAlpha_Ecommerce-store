@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Order, OrderItem, Product
+from .models import EmailVerification, Order, OrderItem, Product
 
 
 @admin.register(Product)
@@ -30,3 +30,11 @@ class OrderAdmin(admin.ModelAdmin):
 class OrderItemAdmin(admin.ModelAdmin):
 	list_display = ("order", "product_name", "price", "quantity", "subtotal")
 	search_fields = ("product_name", "order__email")
+
+
+@admin.register(EmailVerification)
+class EmailVerificationAdmin(admin.ModelAdmin):
+	list_display = ("user", "code_sent_at", "expires_at", "attempts", "send_count", "verified_at")
+	readonly_fields = ("user", "created_at", "code_sent_at", "expires_at", "attempts", "send_count", "verified_at")
+	fields = readonly_fields
+	search_fields = ("user__username", "user__email")

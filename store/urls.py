@@ -20,6 +20,7 @@ urlpatterns = [
     path("orders/<int:pk>/", views.order_detail, name="order_detail"),
     path("orders/<int:pk>/confirmation/", views.order_confirmation, name="order_confirmation"),
     path("register/", views.register, name="register"),
+    path("verify/", views.verify_email, name="verify_email"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
 ]

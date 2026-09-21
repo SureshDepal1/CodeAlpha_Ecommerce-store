@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Verify your email | DepalNova{% endblock %}
+
+{% block content %}
+<main class="registration-page">
+    <section class="registration-card container" aria-labelledby="verification-title">
+        <p class="eyebrow">One last step</p>
+        <h1 id="verification-title">Verify your email</h1>
+        <p class="registration-intro">We sent a 6-digit code to {{ masked_email }}.</p>
+
+        <form class="registration-form" method="post">
+            {% csrf_token %}
+            <div class="form-field">
+                <label for="verification-code">Verification code</label>
+                <input id="verification-code" class="verification-code-input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" required autofocus aria-describedby="verification-help">
+                <p id="verification-help" class="form-help">The code expires soon. Never share it with anyone.</p>
+            </div>
+            <div class="verification-actions">
+                <button class="button registration-submit" type="submit">Verify</button>
+            </div>
+        </form>
+
+        <form class="registration-form verification-resend" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="resend">
+            <button class="button button--secondary" type="submit" id="resend-button" {% if seconds_until_resend %}disabled{% endif %}>Resend code</button>
+            <p class="verification-countdown" id="resend-countdown" data-seconds="{{ seconds_until_resend }}" aria-live="polite"></p>
+        </form>
+
+        {% if dev_console_hint %}
+            <p class="verification-dev-hint">Dev mode: the code was printed in the terminal running runserver.</p>
+        {% endif %}
+
+        <p class="registration-links">
+            <a href="{% url 'store:register' %}">Use a different email</a>
+        </p>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    (function () {
+        const countdown = document.getElementById("resend-countdown");
+        const button = document.getElementById("resend-button");
+        if (!countdown || !button) return;
+        let seconds = Number(countdown.dataset.seconds || 0);
+        const update = function () {
+            if (seconds > 0) {
+                countdown.textContent = "You can resend in " + seconds + " seconds.";
+                button.disabled = true;
+                seconds -= 1;
+            } else {
+                countdown.textContent = "You can request a new code now.";
+                button.disabled = false;
+            }
+        };
+        update();
+        window.setInterval(update, 1000);
+    }());
+</script>
+{% endblock %}

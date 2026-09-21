@@ -717,6 +717,23 @@ main { min-height: 40vh; }
 .registration-submit { width: 100%; margin-top: .3rem; }
 .registration-links { display: flex; justify-content: center; gap: .7rem; margin: 1.5rem 0 0; color: var(--muted); font-size: .8rem; }
 .registration-links a { color: var(--brand); font-weight: 700; text-decoration: none; }
+.verification-code-input {
+    width: 100%;
+    padding: .7rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: .35rem;
+    color: var(--ink);
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: .45rem;
+    line-height: 1.2;
+    text-align: center;
+}
+.verification-code-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(29, 91, 79, .18); }
+.verification-actions { display: grid; gap: .7rem; }
+.verification-resend { width: 100%; }
+.verification-countdown { margin: -.4rem 0 0; color: var(--muted); font-size: .78rem; text-align: center; }
+.verification-dev-hint { margin: 1rem 0 0; color: var(--muted); font-size: .75rem; text-align: center; }
 
 .error-page { display: grid; min-height: calc(100vh - 160px); place-items: center; text-align: center; }
 .error-page__content { padding: 4rem 1rem; }

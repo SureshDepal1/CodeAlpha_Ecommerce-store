@@ -1,0 +1,6 @@
+Your DepalNova verification code is: {{ code }}
+
+This code expires in {{ expiry_minutes }} minutes.
+
+If you didn't create an account, ignore this email.
+Never share this code with anyone.

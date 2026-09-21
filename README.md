@@ -142,3 +142,15 @@ The products page now supports GET-based search across product names, descriptio
 ## Step 13 - Security and Error Handling
 
 Security-sensitive settings are configurable through `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`, and `DJANGO_SECURE_DEPLOYMENT`. Local development remains available over HTTP, while production can enable secure cookies, HTTPS redirect, HSTS, content-type protection, same-origin referrer policy, and clickjacking protection. Authentication, CSRF, cart quantities, server-side order totals, ownership checks, filter input, and expected errors are covered by security-focused tests. Custom 404 and 500 pages avoid exposing technical details. For production, set `DJANGO_DEBUG=False`, provide a strong `DJANGO_SECRET_KEY`, configure `DJANGO_ALLOWED_HOSTS`, and set `DJANGO_SECURE_DEPLOYMENT=True` behind HTTPS.
+
+## Email verification
+
+New registrations start inactive and receive a six-digit email code at `/verify/`. The code is valid for 10 minutes, can be resent with a server-enforced cooldown and limit, and is stored only as a user-specific HMAC. Existing accounts without a verification record remain trusted and can log in normally. The OTP settings can be overridden with `OTP_*`, `UNVERIFIED_ACCOUNT_LIFETIME_MINUTES`, `OTP_MAX_EMAILS_PER_ADDRESS_PER_HOUR`, and `OTP_MAX_REGISTRATIONS_PER_IP_PER_HOUR` environment values or Django test overrides.
+
+Expired inactive registrations can be removed safely with:
+
+```powershell
+venv\Scripts\python.exe manage.py purge_unverified_users
+```
+
+With the development console email backend, the verification code is printed in the terminal running `runserver`. Configure the SMTP values in `.env` before using a real inbox.

@@ -100,3 +100,24 @@ def send_order_emails(order):
         send_owner_alert(order)
     except Exception as error:
         _log_send_failure("owner alert", error)
+
+
+def send_verification_code(user, code):
+    _warn_if_console_backend()
+    context = {"code": code, "expiry_minutes": max(1, settings.OTP_EXPIRY_SECONDS // 60)}
+    subject = f"{_clean_subject_value(code)} is your DepalNova verification code"
+    text_body = render_to_string("emails/verification_code.txt", context)
+    html_body = render_to_string("emails/verification_code.html", context)
+    message = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[user.email],
+    )
+    message.attach_alternative(html_body, "text/html")
+    try:
+        message.send(fail_silently=False)
+    except Exception as error:
+        _log_send_failure("verification", error)
+        raise
+    logger.info("Sent verification email to %s", _recipient_domain(user.email))
