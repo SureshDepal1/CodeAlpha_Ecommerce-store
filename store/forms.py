@@ -6,6 +6,7 @@ from django.conf import settings
 from django.db.models import Q
 
 from .throttle import password_reset_throttled
+from .payments import PAYMENT_METHOD_CHOICES
 
 
 class RegistrationForm(UserCreationForm):
@@ -55,6 +56,13 @@ class LoginForm(AuthenticationForm):
 
 
 class CheckoutForm(forms.Form):
+    payment_method = forms.ChoiceField(
+        label="Payment method",
+        choices=PAYMENT_METHOD_CHOICES,
+        required=False,
+        initial="cod",
+        widget=forms.RadioSelect,
+    )
     full_name = forms.CharField(
         label="Full name",
         max_length=200,
@@ -94,6 +102,9 @@ class CheckoutForm(forms.Form):
         max_length=100,
         widget=forms.TextInput(attrs={"autocomplete": "country-name", "placeholder": "Country"}),
     )
+
+    def clean_payment_method(self):
+        return self.cleaned_data.get("payment_method") or "cod"
 
 
 class StorePasswordResetForm(PasswordResetForm):

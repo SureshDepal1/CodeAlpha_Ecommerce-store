@@ -18,6 +18,14 @@ class Product(models.Model):
 
 
 class Order(models.Model):
+	class PaymentMethod(models.TextChoices):
+		COD = "cod", "Cash on Delivery"
+
+	class PaymentStatus(models.TextChoices):
+		UNPAID = "unpaid", "Unpaid"
+		PAID = "paid", "Paid"
+		REFUNDED = "refunded", "Refunded"
+
 	class Status(models.TextChoices):
 		PENDING = "pending", "Pending"
 		CONFIRMED = "confirmed", "Confirmed"
@@ -35,7 +43,13 @@ class Order(models.Model):
 	state = models.CharField(max_length=100, blank=True)
 	postal_code = models.CharField(max_length=20)
 	country = models.CharField(max_length=100)
+	subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+	shipping_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+	tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 	total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+	payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.COD)
+	payment_status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.UNPAID)
+	paid_at = models.DateTimeField(null=True, blank=True)
 	status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)

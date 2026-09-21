@@ -27,6 +27,8 @@
                     <div><dt>Order date</dt><dd>{{ order.created_at|date:"F j, Y, g:i a" }}</dd></div>
                     <div><dt>Last updated</dt><dd>{{ order.updated_at|date:"F j, Y, g:i a" }}</dd></div>
                     <div><dt>Status</dt><dd>{{ order.get_status_display }}</dd></div>
+                    <div><dt>Payment method</dt><dd>{{ order.get_payment_method_display }}</dd></div>
+                    <div><dt>Payment status</dt><dd>{{ order.get_payment_status_display }}</dd></div>
                 </dl>
             </section>
 
@@ -65,10 +67,10 @@
                         </article>
                     {% endfor %}
                 </div>
-                <div class="order-total-row">
-                    <span>Total amount</span>
-                    <strong>{{ order.total_amount|money }}</strong>
-                </div>
+                <div class="order-total-row"><span>Subtotal</span><strong>{{ order.subtotal|money }}</strong></div>
+                {% if order.shipping_cost %}<div class="order-total-row"><span>Shipping</span><strong>{{ order.shipping_cost|money }}</strong></div>{% endif %}
+                {% if order.tax_amount %}<div class="order-total-row"><span>Tax</span><strong>{{ order.tax_amount|money }}</strong></div>{% endif %}
+                <div class="order-total-row"><span>Total amount</span><strong>{{ order.total_amount|money }}</strong></div>
             </section>
         </div>
 

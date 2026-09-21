@@ -93,6 +93,16 @@
                     </div>
                 </div>
 
+                <div class="checkout-section">
+                    <h2>Payment method</h2>
+                    <div class="field-group">
+                        {{ form.payment_method }}
+                        {% if form.payment_method.errors %}
+                            <div class="field-error">{{ form.payment_method.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 {% if review_only %}
                     <input type="hidden" name="review_only" value="1">
                     <button type="submit" class="button">Place Order</button>
@@ -115,10 +125,10 @@
                 </div>
             {% endfor %}
 
-            <div class="checkout-total-row">
-                <span>Total</span>
-                <strong>{{ total|money }}</strong>
-            </div>
+            <div class="checkout-total-row"><span>Subtotal</span><strong>{{ subtotal|money }}</strong></div>
+            {% if shipping_cost %}<div class="checkout-total-row"><span>Shipping</span><strong>{{ shipping_cost|money }}</strong></div>{% endif %}
+            {% if tax_amount %}<div class="checkout-total-row"><span>Tax</span><strong>{{ tax_amount|money }}</strong></div>{% endif %}
+            <div class="checkout-total-row"><span>Total</span><strong>{{ total|money }}</strong></div>
 
             {% if review_only %}
                 <div class="review-panel">

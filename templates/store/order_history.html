@@ -25,6 +25,7 @@
                         </div>
                         <div class="order-card__summary">
                             <span>{{ order.item_count }} item{{ order.item_count|pluralize }}</span>
+                            <span>{{ order.get_payment_status_display }}</span>
                             <strong>{{ order.total_amount|money }}</strong>
                         </div>
                         <a class="button button--secondary" href="{% url 'store:order_detail' order.pk %}">View Details</a>

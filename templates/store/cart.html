@@ -71,8 +71,10 @@
                     <h2>Order summary</h2>
                     <div class="cart-summary__meta">
                         <span>{{ cart_items|length }} item{% if cart_items|length != 1 %}s{% endif %}</span>
-                        <span>Total: {{ total|money }}</span>
+                        <span>Subtotal: {{ subtotal|money }}</span>
+                        <span>Total at checkout: {{ total|money }}</span>
                     </div>
+                    {% if checkout_adjustments_enabled %}<p class="cart-summary__note">Shipping and tax are added at checkout.</p>{% endif %}
                     <a class="button" href="{% url 'store:checkout' %}">Proceed to Checkout</a>
                     <a class="button button--secondary cart-continue-link" href="{% url 'store:product_list' %}">Continue Shopping</a>
                 </aside>

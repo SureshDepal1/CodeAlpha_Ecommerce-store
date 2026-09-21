@@ -13,10 +13,13 @@
             <tr><td style="padding:28px 24px;">
                 <h1 style="margin:0 0 12px;color:#1d5b4f;font-size:24px;">Your order has been placed</h1>
                 <p>Thank you for your order, {{ order.full_name }}.</p>
-                <p><strong>Order #{{ order.pk }}</strong><br>Order date: {{ order.created_at|date:"F j, Y, g:i a" }}<br>Status: {{ order.get_status_display }}</p>
+                <p><strong>Order #{{ order.pk }}</strong><br>Order date: {{ order.created_at|date:"F j, Y, g:i a" }}<br>Status: {{ order.get_status_display }}<br>Payment: {{ order.get_payment_method_display }} ({{ order.get_payment_status_display }})</p>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="8" style="border-collapse:collapse;margin:20px 0;font-size:14px;">
                     <tr style="background:#dba85a;color:#24332f;"><th align="left">Item</th><th align="right">Qty</th><th align="right">Unit</th><th align="right">Subtotal</th></tr>
                     {% for item in items %}<tr style="border-bottom:1px solid #e1e6df;"><td>{{ item.product_name }}</td><td align="right">{{ item.quantity }}</td><td align="right">{{ item.price|money }}</td><td align="right">{{ item.subtotal|money }}</td></tr>{% endfor %}
+                    <tr><td colspan="3" align="right">Subtotal</td><td align="right">{{ order.subtotal|money }}</td></tr>
+                    {% if order.shipping_cost %}<tr><td colspan="3" align="right">Shipping</td><td align="right">{{ order.shipping_cost|money }}</td></tr>{% endif %}
+                    {% if order.tax_amount %}<tr><td colspan="3" align="right">Tax</td><td align="right">{{ order.tax_amount|money }}</td></tr>{% endif %}
                     <tr><td colspan="3" align="right"><strong>Total</strong></td><td align="right"><strong>{{ order.total_amount|money }}</strong></td></tr>
                 </table>
                 <h2 style="color:#1d5b4f;font-size:18px;">Shipping address</h2>

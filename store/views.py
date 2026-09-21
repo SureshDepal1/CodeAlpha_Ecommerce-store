@@ -20,6 +20,7 @@ from django.views.decorators.http import require_POST
 from .forms import CheckoutForm, LoginForm, RegistrationForm
 from .emails import send_order_emails, send_verification_code
 from .models import EmailVerification, Order, OrderItem, Product
+from .pricing import calculate_totals
 from .throttle import (
     login_blocked,
     record_login_failure,
@@ -138,6 +139,7 @@ def _create_order_from_cart(user, form, session):
             total += subtotal
             items.append((product, quantity, subtotal))
 
+        totals = calculate_totals(total)
         order = Order.objects.create(
             user=user,
             full_name=form.cleaned_data["full_name"],
@@ -148,7 +150,11 @@ def _create_order_from_cart(user, form, session):
             state=form.cleaned_data["state"],
             postal_code=form.cleaned_data["postal_code"],
             country=form.cleaned_data["country"],
-            total_amount=total,
+            subtotal=totals["subtotal"],
+            shipping_cost=totals["shipping_cost"],
+            tax_amount=totals["tax_amount"],
+            total_amount=totals["total"],
+            payment_method=form.cleaned_data.get("payment_method") or Order.PaymentMethod.COD,
         )
         for product, quantity, subtotal in items:
             OrderItem.objects.create(
@@ -224,7 +230,15 @@ def _get_checkout_cart_summary(request):
     if not cart_items:
         return None
 
-    return {"cart_items": cart_items, "total": total, "invalid": has_forbidden_item}
+    totals = calculate_totals(total)
+    return {
+        "cart_items": cart_items,
+        "subtotal": totals["subtotal"],
+        "shipping_cost": totals["shipping_cost"],
+        "tax_amount": totals["tax_amount"],
+        "total": totals["total"],
+        "invalid": has_forbidden_item,
+    }
 
 
 def _normalize_cart(session):
@@ -340,6 +354,7 @@ def product_list(request):
             category_label = category.strip()
             category_labels.setdefault(category_label.casefold(), category_label)
     categories = sorted(category_labels.values(), key=str.casefold)
+    totals = calculate_totals(total)
     return render(
         request,
         "store/product_list.html",
@@ -457,12 +472,17 @@ def cart_view(request):
         request.session["cart"] = {}
         request.session.modified = True
 
+    totals = calculate_totals(total)
     return render(
         request,
         "store/cart.html",
         {
             "cart_items": cart_items,
-            "total": total,
+            "subtotal": totals["subtotal"],
+            "shipping_cost": totals["shipping_cost"],
+            "tax_amount": totals["tax_amount"],
+            "total": totals["total"],
+            "checkout_adjustments_enabled": settings.SHIPPING_FLAT_RATE > 0 or settings.TAX_RATE_PERCENT > 0,
             "cart_count": sum(item["quantity"] for item in cart_items),
         },
     )
@@ -792,8 +812,7 @@ def checkout(request):
                 "store/checkout.html",
                 {
                     "form": form,
-                    "cart_items": cart_summary["cart_items"],
-                    "total": cart_summary["total"],
+                    **cart_summary,
                     "review_only": True,
                 },
             )
@@ -808,8 +827,7 @@ def checkout(request):
             "store/checkout.html",
             {
                 "form": form,
-                "cart_items": cart_summary["cart_items"],
-                "total": cart_summary["total"],
+                **cart_summary,
             },
         )
 
@@ -827,8 +845,7 @@ def checkout(request):
         "store/checkout.html",
         {
             "form": form,
-            "cart_items": cart_summary["cart_items"],
-            "total": cart_summary["total"],
+            **cart_summary,
         },
     )
 

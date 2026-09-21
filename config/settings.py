@@ -1,6 +1,7 @@
 """Django settings for the Simple E-commerce Store project."""
 
 import os
+from decimal import Decimal, InvalidOperation
 from urllib.parse import parse_qs, unquote, urlparse
 from pathlib import Path
 
@@ -53,6 +54,17 @@ def _env_int(name, default, environ=None):
     try:
         return int(str(environ.get(name, default)).strip())
     except (TypeError, ValueError):
+        return default
+
+
+def _env_decimal(name, default, environ=None):
+    environ = os.environ if environ is None else environ
+    raw_value = str(environ.get(name, default)).strip()
+    if not raw_value:
+        return default
+    try:
+        return Decimal(raw_value)
+    except (InvalidOperation, TypeError, ValueError):
         return default
 
 
@@ -271,6 +283,9 @@ if "{amount}" not in STORE_PRICE_FORMAT:
 
     _logging.getLogger("store").warning("STORE_PRICE_FORMAT must contain {amount}; using ${amount}.")
     STORE_PRICE_FORMAT = "${amount}"
+SHIPPING_FLAT_RATE = _env_decimal("SHIPPING_FLAT_RATE", Decimal("0.00"))
+FREE_SHIPPING_THRESHOLD = _env_decimal("FREE_SHIPPING_THRESHOLD", None)
+TAX_RATE_PERCENT = _env_decimal("TAX_RATE_PERCENT", Decimal("0"))
 
 OTP_LENGTH = _env_int("OTP_LENGTH", 6)
 OTP_EXPIRY_SECONDS = _env_int("OTP_EXPIRY_SECONDS", 600)

@@ -3,8 +3,13 @@ New order #{{ order.pk }} - {{ order.total_amount|money }} from {{ order.full_na
 
 Customer: {{ order.full_name }}
 Email: {{ order.email }}
+Payment: {{ order.get_payment_method_display }} ({{ order.get_payment_status_display }})
 Order total: {{ order.total_amount|money }}
 
+Subtotal: {{ order.subtotal|money }}
+{% if order.shipping_cost %}Shipping: {{ order.shipping_cost|money }}
+{% endif %}{% if order.tax_amount %}Tax: {{ order.tax_amount|money }}
+{% endif %}
 Items:
 {% for item in items %}- {{ item.product_name }} | Quantity: {{ item.quantity }} | Unit price: {{ item.price|money }} | Subtotal: {{ item.subtotal|money }}
 {% endfor %}

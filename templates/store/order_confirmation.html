@@ -14,6 +14,7 @@
             <p><strong>Order date:</strong> {{ order.created_at|date:"F j, Y, g:i a" }}</p>
             <p><strong>Customer:</strong> {{ order.full_name }}</p>
             <p><strong>Email:</strong> {{ order.email }}</p>
+            <p><strong>Payment method:</strong> {{ order.get_payment_method_display }}<br><strong>Payment status:</strong> {{ order.get_payment_status_display }}</p>
             <p><strong>Shipping address:</strong><br>{{ order.address }}, {{ order.city }}, {{ order.state }} {{ order.postal_code }}, {{ order.country }}</p>
             <div class="order-actions">
                 <a class="button" href="{% url 'store:order_detail' order.pk %}">View Order Details</a>
@@ -34,10 +35,10 @@
                     <span>{{ item.subtotal|money }}</span>
                 </div>
             {% endfor %}
-            <div class="checkout-total-row">
-                <span>Total</span>
-                <strong>{{ order.total_amount|money }}</strong>
-            </div>
+            <div class="checkout-total-row"><span>Subtotal</span><strong>{{ order.subtotal|money }}</strong></div>
+            {% if order.shipping_cost %}<div class="checkout-total-row"><span>Shipping</span><strong>{{ order.shipping_cost|money }}</strong></div>{% endif %}
+            {% if order.tax_amount %}<div class="checkout-total-row"><span>Tax</span><strong>{{ order.tax_amount|money }}</strong></div>{% endif %}
+            <div class="checkout-total-row"><span>Total</span><strong>{{ order.total_amount|money }}</strong></div>
         </aside>
     </div>
 </main>
