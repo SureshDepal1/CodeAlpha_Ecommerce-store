@@ -179,6 +179,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "store.context_processors.cart_count",
                 "store.context_processors.nav_categories",
+                "store.context_processors.store_info",
             ],
         },
     },
@@ -255,6 +256,14 @@ ORDER_NOTIFICATION_EMAILS = [
 ]
 SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
 SERVE_MEDIA = _env_bool("SERVE_MEDIA", DEBUG)
+STORE_NAME = os.environ.get("STORE_NAME", "DepalNova").strip() or "DepalNova"
+STORE_CONTACT_EMAIL = os.environ.get("STORE_CONTACT_EMAIL", "").strip()
+STORE_PHONE = os.environ.get("STORE_PHONE", "").strip()
+STORE_ADDRESS = os.environ.get("STORE_ADDRESS", "").strip()
+RETURN_POLICY_SUMMARY = os.environ.get("RETURN_POLICY_SUMMARY", "").strip()
+DELIVERY_TIME_SUMMARY = os.environ.get("DELIVERY_TIME_SUMMARY", "").strip()
+LEGAL_JURISDICTION = os.environ.get("LEGAL_JURISDICTION", "").strip()
+LEGAL_LAST_UPDATED = os.environ.get("LEGAL_LAST_UPDATED", "2026-09-21").strip()
 
 OTP_LENGTH = _env_int("OTP_LENGTH", 6)
 OTP_EXPIRY_SECONDS = _env_int("OTP_EXPIRY_SECONDS", 600)

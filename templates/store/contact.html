@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Contact | {{ store_info.name }}{% endblock %}
+{% block content %}
+<main class="registration-page"><article class="registration-card container">
+<p class="eyebrow">{{ store_info.name }}</p><h1>Contact</h1>
+{% if store_info.contact_email or store_info.phone or store_info.address %}<p>Use the configured contact details below.</p>
+{% if store_info.contact_email %}<p>Email: <a href="mailto:{{ store_info.contact_email }}">{{ store_info.contact_email }}</a></p>{% endif %}
+{% if store_info.phone %}<p>Phone: {{ store_info.phone }}</p>{% endif %}
+{% if store_info.address %}<p>Address: {{ store_info.address }}</p>{% endif %}
+{% else %}<p>Contact details have not been configured yet.</p>{% endif %}
+</article></main>
+{% endblock %}

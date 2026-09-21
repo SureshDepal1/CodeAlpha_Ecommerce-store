@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Privacy | {{ store_info.name }}{% endblock %}
+{% block content %}
+<main class="registration-page"><article class="registration-card container">
+<p class="eyebrow">{{ store_info.name }}</p><h1>Privacy</h1><p>Last updated: {{ store_info.last_updated }}</p>
+<h2>Information collected</h2><p>The store collects your username, email address, hashed password, name, phone number, shipping address, orders, and order contents.</p>
+<h2>Why it is used</h2><p>This information is used to manage accounts, verify email addresses, send verification and password-reset codes, process orders, and send order confirmation emails.</p>
+<h2>Cookies</h2><p>The store uses a session cookie for account and cart state and a CSRF cookie to protect forms.</p>
+<h2>Resources</h2><p>The pages load the site's local CSS and JavaScript files. They do not load third-party web resources.</p>
+</article></main>
+{% endblock %}

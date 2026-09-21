@@ -271,6 +271,18 @@ def custom_500(request):
     return render(request, "500.html", status=500)
 
 
+def privacy(request):
+    return render(request, "store/privacy.html")
+
+
+def terms(request):
+    return render(request, "store/terms.html")
+
+
+def contact(request):
+    return render(request, "store/contact.html")
+
+
 def product_list(request):
     query = request.GET.get("q", "").strip()
     selected_category = request.GET.get("category", "").strip()

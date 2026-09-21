@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Terms | {{ store_info.name }}{% endblock %}
+{% block content %}
+<main class="registration-page"><article class="registration-card container">
+<p class="eyebrow">{{ store_info.name }}</p><h1>Terms</h1><p>Last updated: {{ store_info.last_updated }}</p>
+<h2>Accounts</h2><p>You may create an account with a username, email address, and password. New registrations require email verification. Keep your login details private and use the store lawfully.</p>
+<h2>Orders</h2><p>An order records the customer and shipping information submitted at checkout. It is placed as pending until the store confirms it.</p>
+<h2>Products and prices</h2><p>Product availability, stock, names, descriptions, and prices can change. The order record stores the item details used when the order is placed.</p>
+<h2>Payment</h2><p>Payment is handled using the method configured by the store at checkout.</p>
+{% if store_info.return_policy %}<h2>Returns</h2><p>{{ store_info.return_policy }}</p>{% endif %}
+{% if store_info.delivery_time %}<h2>Delivery</h2><p>{{ store_info.delivery_time }}</p>{% endif %}
+{% if store_info.jurisdiction %}<h2>Governing law</h2><p>{{ store_info.jurisdiction }}</p>{% endif %}
+</article></main>
+{% endblock %}

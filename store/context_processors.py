@@ -32,3 +32,18 @@ def nav_categories(request):
         ordered.append(cleaned)
     ordered.sort(key=str.casefold)
     return {"nav_categories": ordered[:12]}
+
+
+def store_info(request):
+    from django.conf import settings
+
+    return {"store_info": {
+        "name": settings.STORE_NAME,
+        "contact_email": settings.STORE_CONTACT_EMAIL,
+        "phone": settings.STORE_PHONE,
+        "address": settings.STORE_ADDRESS,
+        "return_policy": settings.RETURN_POLICY_SUMMARY,
+        "delivery_time": settings.DELIVERY_TIME_SUMMARY,
+        "jurisdiction": settings.LEGAL_JURISDICTION,
+        "last_updated": settings.LEGAL_LAST_UPDATED,
+    }}
