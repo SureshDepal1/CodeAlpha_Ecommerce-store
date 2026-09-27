@@ -1,21 +1,21 @@
 :root {
-    --header-bg: #131921;
-    --nav-bg: #232f3e;
-    --page-bg: #eaeded;
-    --card-bg: #ffffff;
-    --card-border: #d5d9d9;
-    --text: #0f1720;
-    --muted: #565e65;
-    --link: #007185;
-    --link-hover: #c7511f;
-    --primary: #ffd814;
-    --primary-hover: #f7ca00;
-    --secondary: #ffa41c;
-    --search: #febd69;
-    --success: #007600;
-    --danger: #b12704;
-    --shadow: 0 1px 2px rgba(15, 23, 32, 0.08);
-    --focus: #0f6fef;
+    --header-bg: #4a1f3d;
+    --nav-bg: #f0e8f2;
+    --page-bg: #fff8f2;
+    --card-bg: #fffdfb;
+    --card-border: #e2ccd9;
+    --text: #281b2d;
+    --muted: #705f72;
+    --link: #8e3a76;
+    --link-hover: #c04f66;
+    --primary: #d95763;
+    --primary-hover: #b94352;
+    --secondary: #6b9e91;
+    --search: #f0b45b;
+    --success: #3f8062;
+    --danger: #b94352;
+    --shadow: 0 1px 2px rgba(40, 27, 45, 0.12);
+    --focus: #7b4bb7;
     --radius: 8px;
     --container: 1500px;
     --transition: 180ms ease;
@@ -37,7 +37,7 @@ img { display: block; max-width: 100%; }
 button, input, select, textarea { font: inherit; }
 button, a, input, select, textarea { transition: color var(--transition), background-color var(--transition), border-color var(--transition), box-shadow var(--transition); }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-    outline: 3px solid rgba(15, 111, 239, 0.45);
+    outline: 3px solid rgba(123, 75, 183, 0.45);
     outline-offset: 2px;
 }
 .container {
@@ -124,7 +124,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     min-width: 130px;
     padding: 0 0.8rem;
     border: 0;
-    border-right: 1px solid #d5d9d9;
+    border-right: 1px solid #e2ccd9;
     background: #f3f3f3;
     color: var(--text);
 }
