@@ -181,7 +181,7 @@ class EmailOTPTests(TestCase):
     def test_email_failure_leaves_no_orphan_account(self, send_code):
         response = self.client.post(reverse("store:register"), self.registration_data)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "We couldn")
+        self.assertContains(response, "verification email right now")
         self.assertFalse(User.objects.filter(username="otpuser").exists())
         self.assertFalse(EmailVerification.objects.exists())
 

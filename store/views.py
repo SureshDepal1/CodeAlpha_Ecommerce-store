@@ -1,3 +1,4 @@
+import logging
 import secrets
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
@@ -31,6 +32,7 @@ from .throttle import (
 
 
 PENDING_VERIFICATION_SESSION_KEY = "pending_verification_user_id"
+logger = logging.getLogger(__name__)
 
 
 def _pending_users():
@@ -635,7 +637,9 @@ def register(request):
                         )
                         send_verification_code(user, code)
                 except Exception:
-                    form.add_error(None, "We couldn't send the verification email. Please check the address and try again.")
+                    recipient_domain = email.rsplit("@", 1)[-1] if "@" in email else "unknown"
+                    logger.exception("Registration verification delivery failed for recipient domain %s", recipient_domain)
+                    form.add_error(None, "We couldn't send the verification email right now. Please try again later.")
                 else:
                     request.session[PENDING_VERIFICATION_SESSION_KEY] = user.pk
                     return redirect("store:verify_email")

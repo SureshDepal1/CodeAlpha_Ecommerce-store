@@ -33,9 +33,22 @@ def _failure_hint(error):
     return f"Email could not be sent: {error}"
 
 
-def _log_send_failure(label, error):
-    logger.warning("Could not send %s email: %s", label, _failure_hint(error))
-    logger.exception("Email send failure traceback (%s)", label)
+def _log_send_failure(label, error, recipient=None):
+    logger.warning(
+        "Could not send %s email: exception_type=%s exception_message=%s "
+        "smtp_host=%s smtp_port=%s tls=%s ssl=%s sender=%s recipient=%s; %s",
+        label,
+        f"{type(error).__module__}.{type(error).__name__}",
+        str(error),
+        settings.EMAIL_HOST,
+        settings.EMAIL_PORT,
+        settings.EMAIL_USE_TLS,
+        settings.EMAIL_USE_SSL,
+        settings.DEFAULT_FROM_EMAIL,
+        recipient or "unknown",
+        _failure_hint(error),
+        exc_info=True,
+    )
 
 
 def _email_context(order):
@@ -119,6 +132,6 @@ def send_verification_code(user, code):
     try:
         message.send(fail_silently=False)
     except Exception as error:
-        _log_send_failure("verification", error)
+        _log_send_failure("verification", error, user.email)
         raise
     logger.info("Sent verification email to %s", _recipient_domain(user.email))
