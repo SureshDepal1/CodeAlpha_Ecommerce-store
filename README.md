@@ -1,4 +1,4 @@
-# Simple E-commerce Store
+# E-commerce Store
 
 A Django online store with catalog browsing, account verification, cart management, Cash on Delivery checkout, and admin order processing.
 
